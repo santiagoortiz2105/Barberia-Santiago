@@ -1,0 +1,119 @@
+using Barberia.Api.Data;
+using Barberia.Api.Domain.Entities;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Barberia.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ProductosController : ControllerBase
+{
+    private readonly BarberiaDbContext _context;
+
+    public ProductosController(BarberiaDbContext context)
+    {
+        _context = context;
+    }
+
+    [HttpGet("resumen")]
+    public async Task<IActionResult> GetResumen(CancellationToken ct)
+    {
+        if (!await _context.Categorias.AnyAsync(ct))
+        {
+            var catCortes = new Categoria { Nombre = "Cortes de Pelo" };
+            var catBarba = new Categoria { Nombre = "Barbería y Barba" };
+
+            _context.Categorias.AddRange(catCortes, catBarba);
+            await _context.SaveChangesAsync(ct);
+
+            _context.Productos.AddRange(
+                new Producto { CategoriaId = catCortes.Id, Nombre = "Corte Clásico", Descripcion = "Corte con tijera y máquina", Precio = 10000, Disponible = true },
+                new Producto { CategoriaId = catCortes.Id, Nombre = "Degradado / Fade", Descripcion = "Fade con navaja al ras", Precio = 7000, Disponible = true },
+                new Producto { CategoriaId = catBarba.Id, Nombre = "Perfilado de Barba", Descripcion = "Afeitado con toalla caliente", Precio = 2100, Disponible = true }
+            );
+            await _context.SaveChangesAsync(ct);
+        }
+
+        var total = await _context.Productos.CountAsync(x => x.Activo, ct);
+        var disponibles = await _context.Productos.CountAsync(x => x.Activo && x.Disponible, ct);
+
+        var categorias = await _context.Categorias
+            .Where(c => c.Activo)
+            .Select(c => new { c.Id, c.Nombre })
+            .ToListAsync(ct);
+
+        var productos = await _context.Productos
+            .Where(p => p.Activo)
+            .Select(p => new
+            {
+                p.Id,
+                p.CategoriaId,
+                p.Nombre,
+                p.Descripcion,
+                p.Precio,
+                p.ImagenUrl,
+                p.Disponible
+            })
+            .ToListAsync(ct);
+
+        return Ok(new
+        {
+            resumen = new { total, disponibles },
+            categorias,
+            productos
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Crear([FromBody] Producto producto, CancellationToken ct)
+    {
+        if (await _context.Productos.AnyAsync(p => p.Activo && p.Nombre == producto.Nombre, ct))
+        {
+            return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe un producto con ese nombre" });
+        }
+
+        producto.Activo = true;
+        _context.Productos.Add(producto);
+        await _context.SaveChangesAsync(ct);
+        return Ok(producto);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Modificar(long id, [FromBody] Producto productoDto, CancellationToken ct)
+    {
+        var producto = await _context.Productos.FindAsync(new object[] { id }, ct);
+        if (producto == null || !producto.Activo)
+        {
+            return NotFound(new { codigo = "no_encontrado", mensaje = "El producto no existe" });
+        }
+
+        if (await _context.Productos.AnyAsync(p => p.Activo && p.Id != id && p.Nombre == productoDto.Nombre, ct))
+        {
+            return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe otro producto con ese nombre" });
+        }
+
+        producto.Nombre = productoDto.Nombre;
+        producto.Descripcion = productoDto.Descripcion;
+        producto.Precio = productoDto.Precio;
+        producto.CategoriaId = productoDto.CategoriaId;
+        producto.Disponible = productoDto.Disponible;
+
+        await _context.SaveChangesAsync(ct);
+        return Ok(producto);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DarDeBaja(long id, CancellationToken ct)
+    {
+        var producto = await _context.Productos.FindAsync(new object[] { id }, ct);
+        if (producto == null || !producto.Activo)
+        {
+            return NotFound(new { codigo = "no_encontrado", mensaje = "El producto no existe" });
+        }
+
+        producto.Activo = false;
+        await _context.SaveChangesAsync(ct);
+        return Ok(new { mensaje = "Producto dado de baja correctamente" });
+    }
+}
