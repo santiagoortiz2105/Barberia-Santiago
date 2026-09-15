@@ -9,16 +9,62 @@ export interface ItemNavegacion {
   id: string;
   titulo: string;
   ruta: string;
-  icono: String;
+  icono: string;
   grupo: 'principal' | 'configuracion';
   orden: number;
   componente: any;
+  menu_roles?: string[]; // <-- Añadido para controlar el acceso por rol
 }
 
 export const navegacion: ItemNavegacion[] = [
-  { id: 'inicio', titulo: 'Inicio', ruta: '/app/inicio', icono: homeOutline, grupo: 'principal', orden: 10, componente: InicioView },
-  { id: 'servicios', titulo: 'Servicios', ruta: '/app/servicios', icono: cutOutline, grupo: 'principal', orden: 20, componente: ServiciosView },
-  { id: 'barberos', titulo: 'Barberos', ruta: '/app/barberos', icono: peopleOutline, grupo: 'principal', orden: 30, componente: BarberosView },
-  { id: 'turnos', titulo: 'Turnos', ruta: '/app/turnos', icono: calendarOutline, grupo: 'principal', orden: 40, componente: TurnosView },
-  { id: 'micuenta', titulo: 'Mi Cuenta', ruta: '/app/micuenta', icono: personOutline, grupo: 'configuracion', orden: 50, componente: MiCuentaView }
+  { 
+    id: 'inicio', 
+    titulo: 'Inicio', 
+    ruta: '/app/inicio', 
+    icono: homeOutline, 
+    grupo: 'principal', 
+    orden: 10, 
+    componente: InicioView,
+    menu_roles: ['TODOS'] // Todos pueden ver el inicio
+  },
+  { 
+    id: 'servicios', 
+    titulo: 'Servicios', 
+    ruta: '/app/servicios', 
+    icono: cutOutline, 
+    grupo: 'principal', 
+    orden: 20, 
+    componente: ServiciosView,
+    menu_roles: ['TODOS'] // Todos pueden ver los servicios
+  },
+  { 
+    id: 'barberos', 
+    titulo: 'Barberos', 
+    ruta: '/app/barberos', 
+    icono: peopleOutline, 
+    grupo: 'principal', 
+    orden: 30, 
+    componente: BarberosView,
+    menu_roles: ['administrador', 'barbero'] // Solo admin y barbero ven la lista de colegas/personal
+  },
+  { 
+    id: 'turnos', 
+    titulo: 'Turnos', 
+    ruta: '/app/turnos', 
+    icono: calendarOutline, 
+    grupo: 'principal', 
+    orden: 40, 
+    componente: TurnosView,
+    menu_roles: ['administrador', 'barbero'] // RESTRINGIDO: El cliente ('sinrol') no ve los turnos generales agendados
+  },
+  { 
+    id: 'micuenta', 
+    titulo: 'Mi Cuenta', 
+    ruta: '/app/micuenta', 
+    icono: personOutline, 
+    grupo: 'configuracion', 
+    orden: 50, 
+    componente: MiCuentaView,
+    menu_roles: ['TODOS'] // Todos pueden ver su propia cuenta
+  }
 ];

@@ -17,15 +17,15 @@
     </ion-refresher>
 
     <div class="cards-container">
-      <!-- Botón Global para desplegar/ocultar el formulario de Alta -->
-      <div class="accion-global">
+      <!-- Botón Global para desplegar/ocultar el formulario de Alta (SOLO ADMINISTRADOR) -->
+      <div v-if="sesion.rol_activo === 'administrador'" class="accion-global">
         <button class="btn-agregar" @click="abrirFormularioNuevo">
           {{ mostrandoFormulario && !editandoId ? '✖ Cancelar' : '+ Nuevo Servicio' }}
         </button>
       </div>
 
-      <!-- Formulario Desplegable (Alta o Modificación) -->
-      <div v-if="mostrandoFormulario" class="form-nuevo-servicio">
+      <!-- Formulario Desplegable (SOLO ADMINISTRADOR) -->
+      <div v-if="mostrandoFormulario && sesion.rol_activo === 'administrador'" class="form-nuevo-servicio">
         <h3>{{ editandoId ? 'Editar Servicio' : 'Nuevo Servicio / Corte' }}</h3>
 
         <div class="input-group">
@@ -83,7 +83,9 @@
           <ion-card-content>
             <div class="card-header-row">
               <span class="precio">${{ servicio.precio }}</span>
-              <div class="card-actions-buttons">
+              
+              <!-- ACCIONES DE EDICIÓN Y BAJA: Exclusivas del Administrador -->
+              <div v-if="sesion.rol_activo === 'administrador'" class="card-actions-buttons">
                 <button class="btn-editar" @click="cargarParaEditar(servicio)">✏️ Editar</button>
                 <button class="btn-eliminar" @click="confirmarBaja(servicio.id, servicio.nombre)">🗑️ Dar de baja</button>
               </div>
@@ -113,8 +115,10 @@ import { moonOutline, cloudOfflineOutline } from 'ionicons/icons';
 import compPage from '../components/base/comp_page.vue';
 import { cargarTema, aplicarTema } from '../config/tema';
 import { useProductosStore } from '@/stores/productos_store';
+import { use_sesion_store } from '@/stores/sesion_store';
 
 const productosStore = useProductosStore();
+const sesion = use_sesion_store(); // <- Store de sesión para validar los roles
 const esOscuro = ref(false);
 
 const mostrandoFormulario = ref(false);
@@ -156,7 +160,6 @@ const mostrarAlerta = async (titulo: string, mensaje: string) => {
   await alert.present();
 };
 
-// Abrir el formulario para un nuevo registro limpiando estados de edición
 const abrirFormularioNuevo = () => {
   if (mostrandoFormulario.value && !editandoId.value) {
     mostrandoFormulario.value = false;
@@ -172,7 +175,6 @@ const abrirFormularioNuevo = () => {
   }
 };
 
-// Cargar los datos del servicio seleccionado en el formulario para editar
 const cargarParaEditar = (servicio: any) => {
   editandoId.value = servicio.id;
   formServicio.nombre = servicio.nombre;
@@ -180,11 +182,9 @@ const cargarParaEditar = (servicio: any) => {
   formServicio.precio = servicio.precio;
   formServicio.categoriaId = servicio.categoriaId || (productosStore.categorias[0]?.id ?? 1);
   mostrandoFormulario.value = true;
-  // Desplazar la vista hacia arriba para ver el formulario cómodamente
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// Guardar (Alta o Modificación según corresponda)
 const guardarServicio = async () => {
   if (!formServicio.nombre.trim()) {
     mostrarAlerta('Campo requerido', 'Por favor, ingresa el tipo de corte o nombre del servicio.');
@@ -197,10 +197,8 @@ const guardarServicio = async () => {
 
   let res;
   if (editandoId.value) {
-    // Modificación
     res = await productosStore.modificar_producto(editandoId.value, { ...formServicio });
   } else {
-    // Alta
     res = await productosStore.crear_producto({ ...formServicio });
   }
 
@@ -241,6 +239,7 @@ const confirmarBaja = async (id: number, nombre: string) => {
 </script>
 
 <style scoped>
+/* Tus estilos se mantienen intactos */
 .theme-toggle-wrapper {
   display: flex;
   align-items: center;
@@ -381,7 +380,7 @@ const confirmarBaja = async (id: number, nombre: string) => {
 }
 
 .descripcion {
-  fn-size: 0.9rem;
+  font-size: 0.9rem;
   color: var(--ion-color-step-600, #666);
   margin: 0;
   line-height: 1.3;
