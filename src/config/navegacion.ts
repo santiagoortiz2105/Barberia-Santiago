@@ -25,7 +25,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal', 
     orden: 10, 
     componente: InicioView,
-    menu_roles: ['TODOS'] // Todos pueden ver el inicio
+    menu_roles: ['TODOS'] 
   },
   { 
     id: 'servicios', 
@@ -55,7 +55,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal', 
     orden: 40, 
     componente: TurnosView,
-    menu_roles: ['administrador', 'barbero'] // RESTRINGIDO: El cliente ('sinrol') no ve los turnos generales agendados
+    menu_roles: ['TODOS'] // Permitido para todos; dentro de la vista se gestiona si ve los generales o sus propios turnos
   },
   { 
     id: 'micuenta', 

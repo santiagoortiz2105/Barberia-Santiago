@@ -92,6 +92,13 @@
             </div>
             <h2 class="titulo-servicio">{{ servicio.nombre }}</h2>
             <p class="descripcion">{{ servicio.descripcion || 'Sin descripción' }}</p>
+
+            <!-- ACCIÓN DE RESERVA: Exclusiva para Clientes / Usuarios No Administradores -->
+            <div v-if="sesion.rol_activo !== 'administrador'" class="mt-3">
+              <button class="btn-reservar" @click="reservarServicio(servicio)">
+                📅 Reservar este servicio
+              </button>
+            </div>
           </ion-card-content>
         </ion-card>
       </template>
@@ -236,10 +243,34 @@ const confirmarBaja = async (id: number, nombre: string) => {
   });
   await alert.present();
 };
+
+const reservarServicio = async (servicio: any) => {
+  const alert = await alertController.create({
+    header: 'Confirmar Reserva',
+    message: `¿Deseas reservar el servicio "${servicio.nombre}" por $${servicio.precio}?`,
+    buttons: [
+      {
+        text: 'Cancelar',
+        role: 'cancel'
+      },
+      {
+        text: 'Sí, confirmar',
+        handler: async () => {
+          try {
+            // Aquí puedes conectar el guardado de la reserva con tu API
+            mostrarAlerta('¡Turno Reservado!', `Has reservado exitosamente: ${servicio.nombre}. Ya puedes consultarlo en tu sección de Turnos.`);
+          } catch (err) {
+            mostrarAlerta('Error', 'No se pudo procesar la reserva. Intenta nuevamente.');
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
+};
 </script>
 
 <style scoped>
-/* Tus estilos se mantienen intactos */
 .theme-toggle-wrapper {
   display: flex;
   align-items: center;
@@ -384,6 +415,22 @@ const confirmarBaja = async (id: number, nombre: string) => {
   color: var(--ion-color-step-600, #666);
   margin: 0;
   line-height: 1.3;
+}
+
+.mt-3 {
+  margin-top: 12px;
+}
+
+.btn-reservar {
+  width: 100%;
+  background: #3880ff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
 }
 
 .estado-box {

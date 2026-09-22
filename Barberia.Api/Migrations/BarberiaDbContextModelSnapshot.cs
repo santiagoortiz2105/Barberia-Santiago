@@ -86,6 +86,40 @@ namespace Barberia.Api.Migrations
                     b.ToTable("Productos");
                 });
 
+            modelBuilder.Entity("Barberia.Api.Domain.Entities.Turno", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long>("ProductoId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("UsuarioId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductoId");
+
+                    b.ToTable("Turnos");
+                });
+
             modelBuilder.Entity("Barberia.Api.Domain.Entities.Producto", b =>
                 {
                     b.HasOne("Barberia.Api.Domain.Entities.Categoria", "Categoria")
@@ -95,6 +129,17 @@ namespace Barberia.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Categoria");
+                });
+
+            modelBuilder.Entity("Barberia.Api.Domain.Entities.Turno", b =>
+                {
+                    b.HasOne("Barberia.Api.Domain.Entities.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Producto");
                 });
 
             modelBuilder.Entity("Barberia.Api.Domain.Entities.Categoria", b =>

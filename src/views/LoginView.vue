@@ -46,13 +46,44 @@ const handleLogin = async () => {
     return;
   }
 
-  let rolAsignado = 'administrador';
-  if (email.value.includes('barbero')) rolAsignado = 'barbero';
-  if (email.value.includes('sinrol')) rolAsignado = '';
+  try {
+    
+    const response = await fetch('http://192.168.100.137:5211/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email: email.value })
+    });
 
-  await sesion.guardar_sesion('token_jwt_falso_123456', 'refresh_token_789', rolAsignado);
-  
-  router.replace('/app/inicio');
+    if (!response.ok) throw new Error('Error en el servidor');
+
+    const data = await response.json();
+
+    // Definir el rol según el correo ingresado
+    let rolAsignado = 'administrador';
+    if (email.value.includes('barbero')) rolAsignado = 'barbero';
+    if (email.value.includes('sinrol')) rolAsignado = '';
+
+    //Guardar el token JWT REAL y el ID devueltos por la base de datos
+    await sesion.guardar_sesion(
+      data.token,
+      'refresh-token-de-prueba',
+      rolAsignado,
+      data.usuarioId
+    );
+    
+    router.replace('/app/inicio');
+
+  } catch (error) {
+    console.error('Error de conexión al iniciar sesión:', error);
+    const alert = await alertController.create({
+      header: 'Error de conexión',
+      message: 'No se pudo conectar con el backend. Revisa que la API esté encendida.',
+      buttons: ['Aceptar']
+    });
+    await alert.present();
+  }
 };
 </script>
 

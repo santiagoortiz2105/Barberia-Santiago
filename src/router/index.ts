@@ -24,7 +24,16 @@ const routes: RouteRecordRaw[] = [
   { 
     path: '/app', 
     component: main_layout, 
-    children: [...rutas_app] 
+    children: [
+      ...rutas_app,
+      // Ruta de escaneo de QR integrada dentro del layout principal /app
+      {
+        path: 'escanear-qr',
+        name: 'EscanearQr',
+        component: () => import('@/views/EscanearQrView.vue'),
+        meta: { roles: ['ADMIN', 'BARBERO'] } // Protegida solo para administradores y barberos
+      }
+    ] 
   },
   { path: '/:pathMatch(.*)*', redirect: '/app/inicio' }
 ];

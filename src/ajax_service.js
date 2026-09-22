@@ -1,9 +1,5 @@
-// URL base de tu API corriendo en .NET
-const API_BASE_URL = 'http://localhost:5211/api';
+const API_BASE_URL = 'http://localhost:5211';
 
-/**
- * Obtiene el resumen del catálogo (categorías y productos/servicios)
- */
 export async function obtenerResumenCatalogo() {
     try {
         const response = await fetch(`${API_BASE_URL}/productos/resumen`);
@@ -20,10 +16,6 @@ export async function obtenerResumenCatalogo() {
     }
 }
 
-/**
- * Renderiza los servicios en el contenedor HTML asignado
- * @param {string} containerId - ID del elemento HTML donde se mostrarán las tarjetas
- */
 export async function cargarServiciosEnPantalla(containerId = 'servicios-container') {
     const contenedor = document.getElementById(containerId);
     if (!contenedor) return;
@@ -37,7 +29,6 @@ export async function cargarServiciosEnPantalla(containerId = 'servicios-contain
         return;
     }
 
-    // Dibujar las tarjetas de los productos/servicios
     contenedor.innerHTML = datos.productos.map(prod => `
         <div class="card-servicio" style="border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 8px;">
             <h3>${prod.nombre}</h3>
@@ -48,4 +39,53 @@ export async function cargarServiciosEnPantalla(containerId = 'servicios-contain
             </span>
         </div>
     `).join('');
+}
+
+export async function ajax_get(endpoint) {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    if (!response.ok) throw new Error(`Error en GET ${endpoint}: ${response.status}`);
+    return await response.json();
+}
+
+export async function ajax_post(endpoint, data) {
+    const isFormData = data instanceof FormData;
+    const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: headers,
+        body: isFormData ? data : JSON.stringify(data)
+    });
+
+    if (!response.ok) throw new Error(`Error en POST ${endpoint}: ${response.status}`);
+    
+    const text = await response.text();
+    return text ? JSON.parse(text) : {};
+}
+
+export async function ajax_put(endpoint, data) {
+    const isFormData = data instanceof FormData;
+    const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: headers,
+        body: isFormData ? data : JSON.stringify(data)
+    });
+
+    if (!response.ok) throw new Error(`Error en PUT ${endpoint}: ${response.status}`);
+    
+    const text = await response.text();
+    return text ? JSON.parse(text) : {};
+}
+
+export async function ajax_delete(endpoint) {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'DELETE'
+    });
+
+    if (!response.ok) throw new Error(`Error en DELETE ${endpoint}: ${response.status}`);
+    
+    const text = await response.text();
+    return text ? JSON.parse(text) : {};
 }

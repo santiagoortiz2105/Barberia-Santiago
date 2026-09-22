@@ -61,16 +61,36 @@ public class ProductosController : ControllerBase
         {
             resumen = new { total, disponibles },
             categorias,
-            productos
+        productos
         });
     }
 
     [HttpPost]
-    public async Task<IActionResult> Crear([FromBody] Producto producto, CancellationToken ct)
+    public async Task<IActionResult> Crear([FromForm] Producto producto, IFormFile? imagen, CancellationToken ct)
     {
         if (await _context.Productos.AnyAsync(p => p.Activo && p.Nombre == producto.Nombre, ct))
         {
-            return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe un producto con ese nombre" });
+            return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe un servicio con ese nombre" });
+        }
+
+        if (imagen != null && imagen.Length > 0)
+        {
+            var nombreUnico = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
+            var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
+            if (!Directory.Exists(rutaCarpeta))
+            {
+                Directory.CreateDirectory(rutaCarpeta);
+            }
+
+            var rutaCompleta = Path.Combine(rutaCarpeta, nombreUnico);
+
+            using (var stream = new System.IO.FileStream(rutaCompleta, System.IO.FileMode.Create))
+            {
+                await imagen.CopyToAsync(stream, ct);
+            }
+
+            producto.ImagenUrl = "/uploads/" + nombreUnico;
         }
 
         producto.Activo = true;
@@ -80,17 +100,37 @@ public class ProductosController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Modificar(long id, [FromBody] Producto productoDto, CancellationToken ct)
+    public async Task<IActionResult> Modificar(long id, [FromForm] Producto productoDto, IFormFile? imagen, CancellationToken ct)
     {
-        var producto = await _context.Productos.FindAsync(new object[] { id }, ct);
+        var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (producto == null || !producto.Activo)
         {
-            return NotFound(new { codigo = "no_encontrado", mensaje = "El producto no existe" });
+            return NotFound(new { codigo = "no_encontrado", mensaje = "El servicio no existe" });
         }
 
         if (await _context.Productos.AnyAsync(p => p.Activo && p.Id != id && p.Nombre == productoDto.Nombre, ct))
         {
-            return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe otro producto con ese nombre" });
+            return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe otro servicio con ese nombre" });
+        }
+
+        if (imagen != null && imagen.Length > 0)
+        {
+            var nombreUnico = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
+            var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
+            if (!Directory.Exists(rutaCarpeta))
+            {
+                Directory.CreateDirectory(rutaCarpeta);
+            }
+
+            var rutaCompleta = Path.Combine(rutaCarpeta, nombreUnico);
+
+            using (var stream = new System.IO.FileStream(rutaCompleta, System.IO.FileMode.Create))
+            {
+                await imagen.CopyToAsync(stream, ct);
+            }
+
+            producto.ImagenUrl = "/uploads/" + nombreUnico;
         }
 
         producto.Nombre = productoDto.Nombre;
@@ -106,14 +146,14 @@ public class ProductosController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DarDeBaja(long id, CancellationToken ct)
     {
-        var producto = await _context.Productos.FindAsync(new object[] { id }, ct);
+        var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (producto == null || !producto.Activo)
         {
-            return NotFound(new { codigo = "no_encontrado", mensaje = "El producto no existe" });
+            return NotFound(new { codigo = "no_encontrado", mensaje = "El servicio no existe" });
         }
 
         producto.Activo = false;
         await _context.SaveChangesAsync(ct);
-        return Ok(new { mensaje = "Producto dado de baja correctamente" });
+        return Ok(new { mensaje = "Servicio dado de baja correctamente" });
     }
 }
