@@ -123,10 +123,12 @@ import compPage from '../components/base/comp_page.vue';
 import { cargarTema, aplicarTema } from '../config/tema';
 import { useProductosStore } from '@/stores/productos_store';
 import { use_sesion_store } from '@/stores/sesion_store';
+import { obtener_api_url } from '@/config/debug';
 
 const productosStore = useProductosStore();
-const sesion = use_sesion_store(); // <- Store de sesión para validar los roles
+const sesion = use_sesion_store();
 const esOscuro = ref(false);
+const apiUrl = obtener_api_url();
 
 const mostrandoFormulario = ref(false);
 const editandoId = ref<number | null>(null);
@@ -257,10 +259,25 @@ const reservarServicio = async (servicio: any) => {
         text: 'Sí, confirmar',
         handler: async () => {
           try {
-            // Aquí puedes conectar el guardado de la reserva con tu API
-            mostrarAlerta('¡Turno Reservado!', `Has reservado exitosamente: ${servicio.nombre}. Ya puedes consultarlo en tu sección de Turnos.`);
+            const response = await fetch(`http://192.168.100.137:5211/api/turnos`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${sesion.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                productoId: servicio.id,
+                fechaHora: new Date().toISOString()
+              })
+            });
+
+            if (response.ok) {
+              mostrarAlerta('¡Turno Reservado!', `Has reservado exitosamente: ${servicio.nombre}. Ya puedes consultarlo en tu sección de Turnos.`);
+            } else {
+              mostrarAlerta('Error', 'No se pudo procesar la reserva en el servidor.');
+            }
           } catch (err) {
-            mostrarAlerta('Error', 'No se pudo procesar la reserva. Intenta nuevamente.');
+            mostrarAlerta('Error', 'Ocurrió un error de conexión al intentar reservar.');
           }
         }
       }

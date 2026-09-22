@@ -44,7 +44,7 @@
             <div class="qr-container" v-if="turno.id">
               <p class="qr-label">Código QR del Turno:</p>
               <img 
-                :src="`${apiUrl}/api/turnos/${turno.id}/qr`" 
+                :src="`${apiUrl}/turnos/${turno.id}/qr`" 
                 alt="QR del Turno" 
                 class="qr-imagen"
                 @error="ocultarQrError"
@@ -85,6 +85,7 @@ import {
 } from '@ionic/vue';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 import compPage from '../components/base/comp_page.vue';
 import { use_sesion_store } from '@/stores/sesion_store';
 import { obtener_api_url } from '@/config/debug';
@@ -110,8 +111,7 @@ onMounted(async () => {
 const cargarTurnos = async () => {
   cargando.value = true;
   try {
-  
-    const endpoint = `${apiUrl}/api/turnos`; 
+    const endpoint = `${apiUrl}/turnos`; 
     
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -169,7 +169,7 @@ const confirmarBajaTurno = async (id: number) => {
         text: 'Sí, dar de baja',
         handler: async () => {
           try {
-            const res = await fetch(`${apiUrl}/api/turnos/${id}`, { 
+            const res = await fetch(`${apiUrl}/turnos/${id}`, { 
               method: 'DELETE',
               headers: {
                 'Authorization': `Bearer ${sesion.token}`
@@ -193,30 +193,54 @@ const confirmarBajaTurno = async (id: number) => {
 
 const descargarYCompartirPdf = async (idTurno: number) => {
   try {
-    const urlPdf = `${apiUrl}/api/comprobantes/turno/${idTurno}/pdf`;
+    const urlPdf = `${apiUrl}/comprobantes/turno/${idTurno}/pdf`;
     
-    const response = await fetch(urlPdf);
+    const response = await fetch(urlPdf, {
+      headers: {
+        'Authorization': `Bearer ${sesion.token}`
+      }
+    });
+    
     if (!response.ok) throw new Error('No se pudo obtener el comprobante.');
     
     const blob = await response.blob();
-    const base64Data = await convertBlobToBase64(blob);
-
     const fileName = `comprobante_turno_${idTurno}.pdf`;
-    const savedFile = await Filesystem.writeFile({
-      path: fileName,
-      data: base64Data,
-      directory: Directory.Cache,
-    });
 
-    await Share.share({
-      title: 'Comprobante de Turno',
-      text: `Aquí tienes el comprobante del turno #${idTurno} en Barbería Santiago.`,
-      url: savedFile.uri,
-      dialogTitle: 'Compartir Comprobante',
-    });
+    // Detectar si estamos en un entorno nativo (Android / iOS) o en Navegador Web
+    const esNativo = Capacitor.isNativePlatform();
+
+    if (esNativo) {
+      // Flujo nativo con Capacitor (Filesystem + Share)
+      const base64Data = await convertBlobToBase64(blob);
+
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
+
+      await Share.share({
+        title: 'Comprobante de Turno',
+        text: `Aquí tienes el comprobante del turno #${idTurno} en Barbería Santiago.`,
+        url: savedFile.uri,
+        dialogTitle: 'Compartir Comprobante',
+      });
+    } else {
+      // Flujo para Navegador Web (Descarga directa limpia)
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    }
+
   } catch (error) {
-    console.error('Error al compartir PDF:', error);
-    mostrarAlerta('Aviso', 'El PDF se generará correctamente al conectar con el backend de QuestPDF.');
+    console.error('Error al generar o compartir PDF:', error);
+    mostrarAlerta('Error', 'No se pudo generar o descargar el comprobante PDF.');
   }
 };
 

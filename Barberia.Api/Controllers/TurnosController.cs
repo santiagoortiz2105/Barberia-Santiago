@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using QRCoder;
 
 namespace Barberia.Api.Controllers;
 
@@ -30,7 +31,6 @@ public class TurnosController : ControllerBase
             .Include(t => t.Producto)
             .AsQueryable();
 
-        
         if (rolClaim == "sinrol" && long.TryParse(usuarioIdStr, out var usuarioId))
         {
             query = query.Where(t => t.UsuarioId == usuarioId);
@@ -101,6 +101,40 @@ public class TurnosController : ControllerBase
         await _context.SaveChangesAsync(ct);
 
         return Ok(new { mensaje = "Turno cancelado correctamente" });
+    }
+
+    [HttpGet("{id}/qr")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ObtenerQrTurno(long id, CancellationToken ct)
+    {
+        var turno = await _context.Turnos
+            .Include(t => t.Producto)
+            .FirstOrDefaultAsync(t => t.Id == id, ct);
+
+        if (turno == null)
+        {
+            return NotFound(new { mensaje = "Turno no encontrado para generar QR." });
+        }
+
+        string nombreServicio = turno.Producto != null ? turno.Producto.Nombre : "Servicio general";
+        decimal precioServicio = turno.Producto != null ? turno.Producto.Precio : 0;
+
+        string textoQr = $"=== BARBERÍA SANTIAGO ===\n" +
+                         $"Turno ID: {turno.Id}\n" +
+                         $"Servicio: {nombreServicio}\n" +
+                         $"Precio: ${precioServicio}\n" +
+                         $"Fecha: {turno.FechaHora:dd/MM/yyyy HH:mm}\n" +
+                         $"Estado: {turno.Estado}";
+
+        using (var qrGenerator = new QRCodeGenerator())
+        {
+            var qrCodeData = qrGenerator.CreateQrCode(textoQr, QRCodeGenerator.ECCLevel.Q);
+            using (var qrCode = new PngByteQRCode(qrCodeData))
+            {
+                byte[] qrCodeBytes = qrCode.GetGraphic(20);
+                return File(qrCodeBytes, "image/png");
+            }
+        }
     }
 }
 

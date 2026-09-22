@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "ldc0qx5zDQ0=",
+  "dgSpecHash": "E/ab9DeveCw=",
   "success": true,
   "projectFilePath": "C:\\Users\\santi\\Barberia-Santiago\\Barberia.Api\\Barberia.Api.csproj",
   "expectedPackageFiles": [
@@ -30,9 +30,11 @@
     "C:\\Users\\santi\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\8.19.2\\microsoft.identitymodel.protocols.openidconnect.8.19.2.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.23.0\\microsoft.identitymodel.tokens.8.23.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\microsoft.openapi\\2.7.5\\microsoft.openapi.2.7.5.nupkg.sha512",
+    "C:\\Users\\santi\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\mono.texttemplating\\3.0.0\\mono.texttemplating.3.0.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\mysqlconnector\\2.4.0\\mysqlconnector.2.4.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\pomelo.entityframeworkcore.mysql\\9.0.0\\pomelo.entityframeworkcore.mysql.9.0.0.nupkg.sha512",
+    "C:\\Users\\santi\\.nuget\\packages\\qrcoder\\1.8.0\\qrcoder.1.8.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\questpdf\\2026.9.0\\questpdf.2026.9.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\system.codedom\\6.0.0\\system.codedom.6.0.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\system.composition\\7.0.0\\system.composition.7.0.0.nupkg.sha512",
@@ -41,6 +43,7 @@
     "C:\\Users\\santi\\.nuget\\packages\\system.composition.hosting\\7.0.0\\system.composition.hosting.7.0.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\system.composition.runtime\\7.0.0\\system.composition.runtime.7.0.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\system.composition.typedparts\\7.0.0\\system.composition.typedparts.7.0.0.nupkg.sha512",
+    "C:\\Users\\santi\\.nuget\\packages\\system.drawing.common\\6.0.0\\system.drawing.common.6.0.0.nupkg.sha512",
     "C:\\Users\\santi\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.23.0\\system.identitymodel.tokens.jwt.8.23.0.nupkg.sha512"
   ],
   "logs": []
