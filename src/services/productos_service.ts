@@ -1,15 +1,36 @@
-import { obtener_api_url } from '../config/debug'; // Asegúrate de que apunte bien a tu archivo debug.ts
+import { obtener_api_url } from '../config/debug';
 import { use_sesion_store } from '@/stores/sesion_store';
 
-export async function api_obtener_resumen_productos() {
+function obtener_token_seguro(): string {
     const sesion = use_sesion_store();
-    const url = `${obtener_api_url()}/productos/resumen`;
+    if (sesion?.token) return sesion.token;
+
+    const posiblesClaves = [
+        'capacitor-storage_tudominio_token',
+        'token',
+        'access_token',
+        'auth_token'
+    ];
+
+    for (const clave of posiblesClaves) {
+        const valor = localStorage.getItem(clave);
+        if (valor) {
+            return valor.replace(/^["'](.*)["']$/, '$1').trim();
+        }
+    }
+    return '';
+}
+
+export async function api_obtener_resumen_productos() {
+    const baseUrl = obtener_api_url().replace(/\/+$/, "");
+    const url = `${baseUrl}/api/productos/resumen`;
+    const token = obtener_token_seguro();
     
     try {
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${sesion.token}`,
+                'Authorization': token ? `Bearer ${token}` : '',
                 'Content-Type': 'application/json'
             }
         });
@@ -23,38 +44,47 @@ export async function api_obtener_resumen_productos() {
 }
 
 export async function api_crear_producto(producto: any) {
-    const sesion = use_sesion_store();
-    const response = await fetch(`${obtener_api_url()}/productos`, {
+    const baseUrl = obtener_api_url().replace(/\/+$/, "");
+    const token = obtener_token_seguro();
+
+    const response = await fetch(`${baseUrl}/api/productos`, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${sesion.token}`,
+            'Authorization': token ? `Bearer ${token}` : '',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(producto)
     });
+    if (!response.ok) throw new Error('Error al crear producto');
     return await response.json();
 }
 
 export async function api_modificar_producto(id: number, producto: any) {
-    const sesion = use_sesion_store();
-    const response = await fetch(`${obtener_api_url()}/productos/${id}`, {
+    const baseUrl = obtener_api_url().replace(/\/+$/, "");
+    const token = obtener_token_seguro();
+
+    const response = await fetch(`${baseUrl}/api/productos/${id}`, {
         method: 'PUT',
         headers: {
-            'Authorization': `Bearer ${sesion.token}`,
+            'Authorization': token ? `Bearer ${token}` : '',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(producto)
     });
+    if (!response.ok) throw new Error('Error al modificar producto');
     return await response.json();
 }
 
 export async function api_dar_de_baja_producto(id: number) {
-    const sesion = use_sesion_store();
-    const response = await fetch(`${obtener_api_url()}/productos/${id}`, {
+    const baseUrl = obtener_api_url().replace(/\/+$/, "");
+    const token = obtener_token_seguro();
+
+    const response = await fetch(`${baseUrl}/api/productos/${id}`, {
         method: 'DELETE',
         headers: {
-            'Authorization': `Bearer ${sesion.token}`
+            'Authorization': token ? `Bearer ${token}` : ''
         }
     });
+    if (!response.ok) throw new Error('Error al dar de baja el producto');
     return await response.json();
 }

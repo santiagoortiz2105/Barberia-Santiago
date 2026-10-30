@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Barberia.Api.Data; 
+using Barberia.Api.Domain.Entities;
 
 namespace Barberia.Api.Controllers;
 
@@ -26,9 +27,22 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto model, CancellationToken cancellationToken)
     {
-        var email = string.IsNullOrWhiteSpace(model.Email) ? "_sinrol@barberia.com" : model.Email;
+        if (string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
+        {
+            return BadRequest(new { mensaje = "El correo y la contraseña son obligatorios." });
+        }
 
-        // Generamos un token JWT válido directamente
+        var emailLimpio = model.Email.Trim().ToLower();
+
+        // Buscamos al usuario en la base de datos
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == emailLimpio, cancellationToken);
+        if (usuario == null || usuario.PasswordHash != model.Password)
+        {
+            return Unauthorized(new { mensaje = "Correo electrónico o contraseña incorrectos." });
+        }
+
+        // Generamos el token JWT
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? "ClaveSecretaSuperSeguraParaElProyectoDeBarberia2026");
         
@@ -36,9 +50,10 @@ public class AuthController : ControllerBase
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, "1"),
-                new Claim("sub", "1"),
-                new Claim(ClaimTypes.Email, email)
+                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                new Claim("sub", usuario.Id.ToString()),
+                new Claim(ClaimTypes.Email, usuario.Email),
+                new Claim(ClaimTypes.Role, usuario.Rol ?? "Cliente")
             }),
             Expires = DateTime.UtcNow.AddDays(7),
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -51,12 +66,54 @@ public class AuthController : ControllerBase
         { 
             token = tokenString, 
             mensaje = "Login exitoso",
-            usuarioId = 1 
+            usuarioId = usuario.Id,
+            rol = usuario.Rol
         });
+    }
+
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Register([FromBody] RegisterDto model, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
+        {
+            return BadRequest(new { mensaje = "El correo y la contraseña son obligatorios." });
+        }
+
+        var emailLimpio = model.Email.Trim().ToLower();
+
+        var existeUsuario = await _context.Usuarios
+            .AnyAsync(u => u.Email.ToLower() == emailLimpio, cancellationToken);
+
+        if (existeUsuario)
+        {
+            return BadRequest(new { mensaje = "El correo electrónico ya se encuentra registrado." });
+        }
+
+        var nuevoUsuario = new Usuario
+        {
+            Nombre = model.Nombre?.Trim() ?? "Usuario",
+            Email = emailLimpio,
+            PasswordHash = model.Password, 
+            Rol = "Cliente"
+        };
+
+        _context.Usuarios.Add(nuevoUsuario);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { mensaje = "Cuenta creada con éxito. Ya puedes iniciar sesión." });
     }
 }
 
 public class LoginDto
 {
     public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class RegisterDto
+{
+    public string Nombre { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 }

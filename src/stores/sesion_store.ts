@@ -5,7 +5,7 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 const CLAVE_TOKEN = 'tudominio_token';
 const CLAVE_REFRESH = 'tudominio_refresh';
 const CLAVE_ROL = 'tudominio_rol';
-const CLAVE_USER_ID = 'tudominio_user_id'; // <-- Nueva clave
+const CLAVE_USER_ID = 'tudominio_user_id'; 
 
 export const use_sesion_store = defineStore('sesion', () => {
   const token = ref<string | null>(null);
@@ -13,22 +13,37 @@ export const use_sesion_store = defineStore('sesion', () => {
   const autenticado = ref<boolean>(false);
   const restaurando = ref<boolean>(true);
   const rol_activo = ref<string | null>(null);
-  const usuario_id = ref<any | null>(null); // <-- Nuevo estado para el ID
+  const usuario_id = ref<any | null>(null); 
 
   const restaurar_sesion = async () => {
     try {
       restaurando.value = true;
-      const tokenRes: any = await (SecureStorage as any).get(CLAVE_TOKEN);
-      const rolRes: any = await (SecureStorage as any).get(CLAVE_ROL);
-      const userIdRes: any = await (SecureStorage as any).get(CLAVE_USER_ID); // <-- Recuperar ID
+      
+      let tokenRes: any = null;
+      let rolRes: any = null;
+      let userIdRes: any = null;
 
-      if (tokenRes) {
-        token.value = typeof tokenRes === 'string' ? tokenRes : tokenRes.value;
-        rol_activo.value = rolRes ? (typeof rolRes === 'string' ? rolRes : rolRes.value) : null;
-        usuario_id.value = userIdRes ? (typeof userIdRes === 'string' ? userIdRes : userIdRes.value) : null;
+      try {
+        tokenRes = await (SecureStorage as any).get(CLAVE_TOKEN);
+        rolRes = await (SecureStorage as any).get(CLAVE_ROL);
+        userIdRes = await (SecureStorage as any).get(CLAVE_USER_ID);
+      } catch (err) {
+        console.warn("SecureStorage falló en el dispositivo, usando respaldo local:", err);
+      }
+    
+      const finalToken = (typeof tokenRes === 'string' ? tokenRes : tokenRes?.value) || localStorage.getItem(CLAVE_TOKEN);
+      const finalRol = (typeof rolRes === 'string' ? rolRes : rolRes?.value) || localStorage.getItem(CLAVE_ROL);
+      const finalUserId = (typeof userIdRes === 'string' ? userIdRes : userIdRes?.value) || localStorage.getItem(CLAVE_USER_ID);
+
+      if (finalToken) {
+        token.value = finalToken;
+        rol_activo.value = finalRol ? finalRol.toLowerCase() : null; // Normalizado a minúsculas
+        usuario_id.value = finalUserId;
         autenticado.value = true;
+        console.log("Sesión restaurada exitosamente. Rol activo:", rol_activo.value);
       }
     } catch (e) {
+      console.error("Error crítico al restaurar sesión:", e);
       autenticado.value = false;
     } finally {
       restaurando.value = false;
@@ -36,29 +51,52 @@ export const use_sesion_store = defineStore('sesion', () => {
   };
 
   const guardar_sesion = async (newToken: string, newRefresh: string, newRol: string, newUserId: any) => {
+    const rolNormalizado = newRol ? newRol.toLowerCase() : '';
+
     token.value = newToken;
     refresh_token.value = newRefresh;
-    rol_activo.value = newRol;
-    usuario_id.value = newUserId; // <-- Guardar en memoria
+    rol_activo.value = rolNormalizado;
+    usuario_id.value = newUserId;
     autenticado.value = true;
 
-    await (SecureStorage as any).set(CLAVE_TOKEN, newToken);
-    await (SecureStorage as any).set(CLAVE_REFRESH, newRefresh);
-    await (SecureStorage as any).set(CLAVE_ROL, newRol);
-    await (SecureStorage as any).set(CLAVE_USER_ID, String(newUserId)); // <-- Guardar en storage seguro
+    localStorage.setItem(CLAVE_TOKEN, newToken);
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('access_token', newToken);
+
+    localStorage.setItem(CLAVE_REFRESH, newRefresh);
+    localStorage.setItem(CLAVE_ROL, rolNormalizado);
+    localStorage.setItem(CLAVE_USER_ID, String(newUserId));
+
+    try {
+      await (SecureStorage as any).set(CLAVE_TOKEN, newToken);
+      await (SecureStorage as any).set(CLAVE_REFRESH, newRefresh);
+      await (SecureStorage as any).set(CLAVE_ROL, rolNormalizado);
+      await (SecureStorage as any).set(CLAVE_USER_ID, String(newUserId));
+    } catch (e) {
+      console.warn("No se pudo guardar en SecureStorage nativo, se usó localStorage:", e);
+    }
   };
 
   const cerrar_sesion = async () => {
     token.value = null;
     refresh_token.value = null;
     rol_activo.value = null;
-    usuario_id.value = null; // <-- Limpiar ID
+    usuario_id.value = null; 
     autenticado.value = false;
 
-    await (SecureStorage as any).remove(CLAVE_TOKEN);
-    await (SecureStorage as any).remove(CLAVE_REFRESH);
-    await (SecureStorage as any).remove(CLAVE_ROL);
-    await (SecureStorage as any).remove(CLAVE_USER_ID);
+    localStorage.removeItem(CLAVE_TOKEN);
+    localStorage.removeItem(CLAVE_REFRESH);
+    localStorage.removeItem(CLAVE_ROL);
+    localStorage.removeItem(CLAVE_USER_ID);
+
+    try {
+      await (SecureStorage as any).remove(CLAVE_TOKEN);
+      await (SecureStorage as any).remove(CLAVE_REFRESH);
+      await (SecureStorage as any).remove(CLAVE_ROL);
+      await (SecureStorage as any).remove(CLAVE_USER_ID);
+    } catch (e) {
+      
+    }
   };
 
   const obtener_rol_activo = () => {
@@ -71,7 +109,7 @@ export const use_sesion_store = defineStore('sesion', () => {
     autenticado,
     restaurando,
     rol_activo,
-    usuario_id, // <-- Exportar para usarlo en las vistas
+    usuario_id, 
     restaurar_sesion,
     guardar_sesion,
     cerrar_sesion,

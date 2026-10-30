@@ -29,7 +29,7 @@ import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning
 import compPage from '../components/base/comp_page.vue';
 import { obtener_api_url } from '@/config/debug';
 
-const apiUrl = obtener_api_url();
+const apiUrl = obtener_api_url() || 'http://localhost:5211';
 const resultadoEscaneo = ref<string | null>(null);
 const datosTurnoId = ref<any | null>(null);
 
@@ -44,17 +44,14 @@ const mostrarAlerta = async (titulo: string, mensaje: string) => {
 
 const iniciarEscaneo = async () => {
   try {
-    // Solicitar permisos de cámara correctamente con la nueva versión del plugin
     const status = await BarcodeScanner.requestPermissions();
     if (status.camera !== 'granted') {
       mostrarAlerta('Permiso denegado', 'Se necesita acceso a la cámara para escanear códigos QR.');
       return;
     }
 
-    // Ocultar elementos nativos de la app para la cámara transparente
     document.querySelector('body')?.classList.add('barcode-scanner-active');
 
-    // Iniciar el escaneo usando solo formatos QR
     const result = await BarcodeScanner.scan({
       formats: [BarcodeFormat.QrCode],
     });
@@ -73,7 +70,6 @@ const iniciarEscaneo = async () => {
   }
 };
 
-// Método de respaldo para pruebas en entorno web de desarrollo
 const simularEscaneoWeb = async () => {
   const alert = await alertController.create({
     header: 'Entorno Web / Simulador',
@@ -82,7 +78,7 @@ const simularEscaneoWeb = async () => {
       {
         name: 'idTurno',
         type: 'text',
-        placeholder: 'ID del Turno (ej. 1)'
+        placeholder: 'ID del Turno (ej. 15)'
       }
     ],
     buttons: [
@@ -103,22 +99,45 @@ const simularEscaneoWeb = async () => {
 
 const procesarTurnoEscaneado = async () => {
   try {
-    // Endpoint backend .NET para validar/dar por atendido el turno mediante su ID o código
-    const response = await fetch(`${apiUrl}/api/turnos/validar`, {
+    // 1. Extraer limpiamente el número de ID si el QR contiene texto en formato multilínea
+    let idNumerico = datosTurnoId.value;
+    if (typeof idNumerico === 'string' && idNumerico.includes('Turno ID:')) {
+      const match = idNumerico.match(/Turno ID:\s*([0-9]+)/i);
+      if (match && match[1]) {
+        idNumerico = match[1];
+      }
+    }
+
+    // 2. Obtener el token guardado para autorizar la petición
+    const token = localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('capacitor-storage_tudominio_token');
+    const tokenLimpio = token ? token.replace(/^["']|["']$/g, '').trim() : '';
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (tokenLimpio) {
+      headers['Authorization'] = `Bearer ${tokenLimpio}`;
+    }
+
+    const baseClean = apiUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+    const urlFinal = `${baseClean}/api/turnos/validar`;
+
+    const response = await fetch(urlFinal, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ qrData: datosTurnoId.value })
+      headers: headers,
+      body: JSON.stringify({ qrData: idNumerico })
     });
 
-    if (response.ok || true) {
+    if (response.ok) {
       mostrarAlerta('Éxito', '¡Turno validado y atendido con éxito!');
       resultadoEscaneo.value = null;
     } else {
-      mostrarAlerta('Error', 'No se pudo validar el código QR en el servidor.');
+      const errData = await response.json().catch(() => ({}));
+      mostrarAlerta('Error', errData.mensaje || 'No se pudo validar el código QR en el servidor.');
     }
   } catch (e) {
-    mostrarAlerta('Atención', 'Acción registrada localmente correctamente.');
-    resultadoEscaneo.value = null;
+    console.error(e);
+    mostrarAlerta('Atención', 'Ocurrió un error al intentar comunicarse con el servidor.');
   }
 };
 </script>

@@ -26,12 +26,11 @@ const routes: RouteRecordRaw[] = [
     component: main_layout, 
     children: [
       ...rutas_app,
-      // Ruta de escaneo de QR integrada dentro del layout principal /app
       {
         path: 'escanear-qr',
         name: 'EscanearQr',
         component: () => import('@/views/EscanearQrView.vue'),
-        meta: { roles: ['ADMIN', 'BARBERO'] } // Protegida solo para administradores y barberos
+        meta: { roles: ['ADMIN', 'BARBERO'] }
       }
     ] 
   },
@@ -43,7 +42,6 @@ const router = createRouter({
   routes
 });
 
-// Bloquea de verdad según autenticación, roles y muestra el 403 sin congelar
 router.beforeEach(async (to) => {
   const sesion = use_sesion_store();
 
@@ -59,23 +57,30 @@ router.beforeEach(async (to) => {
     return { path: "/login", replace: true };
   }
 
-  const roles_permitidos = to.meta.roles as string[];
-  if (!roles_permitidos || roles_permitidos.includes('TODOS')) return true;
+  const roles_permitidos = (to.meta.roles as string[]) || ['TODOS'];
+  if (roles_permitidos.includes('TODOS')) return true;
 
   const rolActivo = sesion.obtener_rol_activo();
-  if (rolActivo && roles_permitidos.includes(rolActivo)) return true;
+  const rolActivoUpper = rolActivo ? rolActivo.toUpperCase() : '';
+  
+  // 🔍 LOG DE DIAGNÓSTICO: Abre la consola para ver qué valores se están evaluando
+  console.log(`[Router Guard] Ruta destino: ${to.path} | Rol Activo en Store:`, rolActivo, `(Upper: ${rolActivoUpper}) | Roles permitidos:`, roles_permitidos);
 
-  // Autenticado pero sin permiso (Error 403 lógico )
+  // Si el usuario es ADMIN, pase libre absoluto
+  if (rolActivoUpper === 'ADMIN') return true;
+
+  const rolesPermitidosUpper = roles_permitidos.map(r => r.toUpperCase());
+  if (rolActivoUpper && rolesPermitidosUpper.includes(rolActivoUpper)) return true;
+
+  // Si llega aquí, dispara el 403
   const alert = await alertController.create({
     header: 'Acceso Denegado (403)',
-    message: 'No tienes los permisos necesarios para acceder a esta sección de la barbería.',
+    message: `No tienes permisos. Ruta: ${to.path} - Tu rol: ${rolActivo}`,
     buttons: ['Aceptar'],
     cssClass: 'custom-ionic-alert'
   });
   
   await alert.present();
-
-  // Cancelamos la navegación en curso para evitar bucles o congelamientos
   return false;
 });
 

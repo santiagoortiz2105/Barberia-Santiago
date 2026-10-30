@@ -1,5 +1,6 @@
 using Barberia.Api.Data;
 using Barberia.Api.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,36 +62,17 @@ public class ProductosController : ControllerBase
         {
             resumen = new { total, disponibles },
             categorias,
-        productos
+            productos
         });
     }
 
     [HttpPost]
-    public async Task<IActionResult> Crear([FromForm] Producto producto, IFormFile? imagen, CancellationToken ct)
+    [Authorize]
+    public async Task<IActionResult> Crear([FromBody] Producto producto, CancellationToken ct)
     {
         if (await _context.Productos.AnyAsync(p => p.Activo && p.Nombre == producto.Nombre, ct))
         {
             return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe un servicio con ese nombre" });
-        }
-
-        if (imagen != null && imagen.Length > 0)
-        {
-            var nombreUnico = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
-            var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-
-            if (!Directory.Exists(rutaCarpeta))
-            {
-                Directory.CreateDirectory(rutaCarpeta);
-            }
-
-            var rutaCompleta = Path.Combine(rutaCarpeta, nombreUnico);
-
-            using (var stream = new System.IO.FileStream(rutaCompleta, System.IO.FileMode.Create))
-            {
-                await imagen.CopyToAsync(stream, ct);
-            }
-
-            producto.ImagenUrl = "/uploads/" + nombreUnico;
         }
 
         producto.Activo = true;
@@ -100,7 +82,8 @@ public class ProductosController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Modificar(long id, [FromForm] Producto productoDto, IFormFile? imagen, CancellationToken ct)
+    [Authorize]
+    public async Task<IActionResult> Modificar(long id, [FromBody] Producto productoDto, CancellationToken ct)
     {
         var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == id, ct);
         if (producto == null || !producto.Activo)
@@ -111,26 +94,6 @@ public class ProductosController : ControllerBase
         if (await _context.Productos.AnyAsync(p => p.Activo && p.Id != id && p.Nombre == productoDto.Nombre, ct))
         {
             return BadRequest(new { codigo = "duplicado", mensaje = "Ya existe otro servicio con ese nombre" });
-        }
-
-        if (imagen != null && imagen.Length > 0)
-        {
-            var nombreUnico = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
-            var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-
-            if (!Directory.Exists(rutaCarpeta))
-            {
-                Directory.CreateDirectory(rutaCarpeta);
-            }
-
-            var rutaCompleta = Path.Combine(rutaCarpeta, nombreUnico);
-
-            using (var stream = new System.IO.FileStream(rutaCompleta, System.IO.FileMode.Create))
-            {
-                await imagen.CopyToAsync(stream, ct);
-            }
-
-            producto.ImagenUrl = "/uploads/" + nombreUnico;
         }
 
         producto.Nombre = productoDto.Nombre;
@@ -144,6 +107,7 @@ public class ProductosController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<IActionResult> DarDeBaja(long id, CancellationToken ct)
     {
         var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == id, ct);
@@ -156,4 +120,4 @@ public class ProductosController : ControllerBase
         await _context.SaveChangesAsync(ct);
         return Ok(new { mensaje = "Servicio dado de baja correctamente" });
     }
-}
+  }

@@ -45,6 +45,39 @@ namespace Barberia.Api.Migrations
                     b.ToTable("Categorias");
                 });
 
+            modelBuilder.Entity("Barberia.Api.Domain.Entities.Notificacion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Leida")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Notificaciones");
+                });
+
             modelBuilder.Entity("Barberia.Api.Domain.Entities.Producto", b =>
                 {
                     b.Property<long>("Id")
@@ -97,6 +130,9 @@ namespace Barberia.Api.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<long?>("BarberoId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("CreadoEn")
                         .HasColumnType("datetime(6)");
 
@@ -115,9 +151,43 @@ namespace Barberia.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BarberoId");
+
                     b.HasIndex("ProductoId");
 
                     b.ToTable("Turnos");
+                });
+
+            modelBuilder.Entity("Barberia.Api.Domain.Entities.Usuario", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreadoEn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Usuarios");
                 });
 
             modelBuilder.Entity("Barberia.Api.Domain.Entities.Producto", b =>
@@ -133,11 +203,17 @@ namespace Barberia.Api.Migrations
 
             modelBuilder.Entity("Barberia.Api.Domain.Entities.Turno", b =>
                 {
+                    b.HasOne("Barberia.Api.Domain.Entities.Usuario", "Barbero")
+                        .WithMany()
+                        .HasForeignKey("BarberoId");
+
                     b.HasOne("Barberia.Api.Domain.Entities.Producto", "Producto")
                         .WithMany()
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Barbero");
 
                     b.Navigation("Producto");
                 });

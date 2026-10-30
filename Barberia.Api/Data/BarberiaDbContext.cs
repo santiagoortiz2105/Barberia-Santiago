@@ -10,6 +10,9 @@ public class BarberiaDbContext : DbContext
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<Turno> Turnos { get; set; }
+    public DbSet<Notificacion> Notificaciones { get; set; }
+    public DbSet<Usuario> Usuarios { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

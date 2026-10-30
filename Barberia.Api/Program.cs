@@ -30,6 +30,26 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = false,
         ClockSkew = TimeSpan.Zero
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var token = context.Token;
+            Console.WriteLine($"[DEBUG JWT] Token recibido: {(string.IsNullOrEmpty(token) ? "¡ESTÁ VACÍO!" : token.Substring(0, Math.Min(25, token.Length)) + "...")}");
+            return Task.CompletedTask;
+        },
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"[DEBUG JWT] TOKEN RECHAZADO: {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine("[DEBUG JWT] ¡Token validado exitosamente!");
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Agregar Controllers
