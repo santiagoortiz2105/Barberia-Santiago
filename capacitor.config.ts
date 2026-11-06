@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Barberia-Santiago',
   webDir: 'dist',
   server: {
-    androidScheme: 'http' // <-- AGREGAR ESTO AQUÍ
+    androidScheme: 'http' 
   },
   plugins: {
     SplashScreen: {

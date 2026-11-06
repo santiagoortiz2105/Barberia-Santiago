@@ -114,6 +114,7 @@ import {
   IonRefresher, 
   IonRefresherContent, 
   alertController, 
+  toastController, 
   type RefresherCustomEvent 
 } from '@ionic/vue';
 import { cloudOfflineOutline } from 'ionicons/icons';
@@ -132,6 +133,8 @@ const offlineStore = use_offline_store();
 const mostrandoFormulario = ref(false);
 const editandoId = ref<number | null>(null);
 
+const listaBarberos = ref<any[]>([]);
+
 const esAdministrador = computed(() => {
   const rol = sesion.rol_activo || '';
   const rolLower = rol.toLowerCase();
@@ -147,10 +150,25 @@ const formServicio = reactive({
 });
 
 onMounted(async () => {
-  await offlineStore.inicializarRed();
-  await productosStore.cargar_productos();
-  if (productosStore.categorias.length > 0) {
-    formServicio.categoriaId = productosStore.categorias[0].id;
+  try {
+    await offlineStore.inicializarRed();
+    await productosStore.cargar_productos();
+    if (productosStore.categorias.length > 0) {
+      formServicio.categoriaId = productosStore.categorias[0].id;
+    }
+    listaBarberos.value = await offlineStore.obtenerBarberosOffline();
+
+    // Escuchamos cuando vuelve la conexión para sincronizar y notificar éxito
+    window.addEventListener('online', async () => {
+      offlineStore.sinConexion = false; // Corregido: Sin .value
+      const exito = await offlineStore.procesarCola();
+      if (exito) {
+        mostrarAlerta('¡Turno Reservado!', 'Turno reservado exitosamente.');
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al inicializar la vista de servicios:', error);
   }
 });
 
@@ -167,6 +185,17 @@ const mostrarAlerta = async (titulo: string, mensaje: string) => {
     cssClass: 'custom-ionic-alert'
   });
   await alert.present();
+};
+
+const mostrarToast = async (mensaje: string) => {
+  const toast = await toastController.create({
+    message: mensaje,
+    duration: 3500,
+    position: 'bottom',
+    color: 'warning',
+    buttons: [{ text: 'OK', role: 'cancel' }]
+  });
+  await toast.present();
 };
 
 const abrirFormularioNuevo = () => {
@@ -266,23 +295,23 @@ const generarHorariosDisponibles = () => {
 };
 
 const iniciarProcesoReserva = async (servicio: any) => {
-  let listaBarberos = [];
-  try {
-    const resBarberos = await ajax_service.ajax_get('/barberos');
-    listaBarberos = Array.isArray(resBarberos) ? resBarberos : [];
-  } catch (e) {
-    console.error("No se pudieron cargar los barberos", e);
+  let barberos = listaBarberos.value;
+  if (!barberos || barberos.length === 0) {
+    try {
+      barberos = await offlineStore.obtenerBarberosOffline();
+    } catch (e) {
+      console.error("No se pudieron cargar los barberos", e);
+    }
   }
 
-  if (listaBarberos.length === 0) {
-    mostrarAlerta('Aviso', 'No hay barberos disponibles registrados en este momento. Asigna al menos uno desde la sección de Barberos.');
-    return;
+  if (!barberos || barberos.length === 0) {
+    barberos = [{ id: 0, nombre: 'Barbero General / Por Asignar' }];
   }
 
-  const inputsBarberos: any[] = listaBarberos.map((b: any, index: number) => ({
+  const inputsBarberos: any[] = barberos.map((b: any, index: number) => ({
     type: 'radio' as const,
     label: b.nombre || b.email || `Barbero ID: ${b.id}`,
-    value: b.id,
+    value: b.id !== undefined ? b.id : 0,
     checked: index === 0
   }));
 
@@ -294,11 +323,8 @@ const iniciarProcesoReserva = async (servicio: any) => {
       {
         text: 'Siguiente',
         handler: async (barberoIdSeleccionado) => {
-          if (!barberoIdSeleccionado) {
-            mostrarAlerta('Error', 'Debes seleccionar un barbero.');
-            return;
-          }
-          await abrirSelectorFecha(servicio, barberoIdSeleccionado);
+          const bId = barberoIdSeleccionado !== undefined ? barberoIdSeleccionado : 0;
+          await abrirSelectorFecha(servicio, bId);
         }
       }
     ]
@@ -369,13 +395,25 @@ const abrirSelectorHorario = async (servicio: any, barberoId: number, fechaSelec
             horario: horarioElegido,
             fechaHora: `${fechaSeleccionada}T00:00:00`
           };
+            if (offlineStore.sinConexion) {
+            const barberoSeleccionadoObj = listaBarberos.value.find((b: any) => (b.id !== undefined ? b.id : 0) === Number(barberoId));
+            const nombreBarberoStr = barberoSeleccionadoObj ? (barberoSeleccionadoObj.nombre || barberoSeleccionadoObj.email) : 'Por asignar';
 
-          if (offlineStore.sinConexion) {
-            const turnoPendiente = offlineStore.encolarCambio(payload);
+            const turnoPendiente = offlineStore.encolarCambio({
+              ...payload,
+              producto: servicio.nombre,
+              precio: servicio.precio,
+              clienteNombre: 'Cliente', 
+              barberoNombre: nombreBarberoStr,
+              estado: 'Pendiente de envío',
+              sin_enviar: true
+            });
+
             if (turnosStore.turnos) {
               turnosStore.turnos.unshift(turnoPendiente);
             }
-            mostrarAlerta('Guardado (Sin Conexión)', 'Tu reserva quedó en cola local y se sincronizará al volver la red.');
+
+            mostrarToast('⚠️ Turno guardado localmente. Se enviará al recuperar la red.');
             return;
           }
 

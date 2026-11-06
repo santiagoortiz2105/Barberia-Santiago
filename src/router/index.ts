@@ -21,6 +21,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/LoginView.vue'), 
     meta: { publica: true } 
   },
+  // 🔗 RUTA PÚBLICA PARA EL DEEP LINK / QR 
+  { 
+    path: '/p/:tokenPublico', 
+    component: () => import('../views/DetallePublicoView.vue'), 
+    meta: { publica: true } 
+  },
   { 
     path: '/app', 
     component: main_layout, 
@@ -50,7 +56,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.publica) {
-    return sesion.autenticado ? { path: "/app/inicio", replace: true } : true;
+    return sesion.autenticado && to.path === '/login' ? { path: "/app/inicio", replace: true } : true;
   }
 
   if (!sesion.autenticado) {
@@ -63,19 +69,17 @@ router.beforeEach(async (to) => {
   const rolActivo = sesion.obtener_rol_activo();
   const rolActivoUpper = rolActivo ? rolActivo.toUpperCase() : '';
   
-  // 🔍 LOG DE DIAGNÓSTICO: Abre la consola para ver qué valores se están evaluando
   console.log(`[Router Guard] Ruta destino: ${to.path} | Rol Activo en Store:`, rolActivo, `(Upper: ${rolActivoUpper}) | Roles permitidos:`, roles_permitidos);
 
-  // Si el usuario es ADMIN, pase libre absoluto
   if (rolActivoUpper === 'ADMIN') return true;
 
   const rolesPermitidosUpper = roles_permitidos.map(r => r.toUpperCase());
   if (rolActivoUpper && rolesPermitidosUpper.includes(rolActivoUpper)) return true;
 
-  // Si llega aquí, dispara el 403
+  // Dispara el 403 corregido
   const alert = await alertController.create({
     header: 'Acceso Denegado (403)',
-    message: `No tienes permisos. Ruta: ${to.path} - Tu rol: ${rolActivo}`,
+    message: `No tienes permisos.\nRuta: ${to.path}\nTu rol: ${rolActivo}`,
     buttons: ['Aceptar'],
     cssClass: 'custom-ionic-alert'
   });

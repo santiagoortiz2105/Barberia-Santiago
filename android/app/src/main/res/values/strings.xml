@@ -4,4 +4,5 @@
     <string name="title_activity_main">Barberia-Santiago</string>
     <string name="package_name">io.ionic.starter</string>
     <string name="custom_url_scheme">io.ionic.starter</string>
+    <string name="server_client_id">203460388544-k5edkijusrvvu2gjqvr78igf959ogkli.apps.googleusercontent.com</string>
 </resources>

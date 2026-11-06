@@ -1,10 +1,10 @@
-using Barberia.Api.Data;
-using Barberia.Api.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using QRCoder;
+using Barberia.Api.Data;
+using Barberia.Api.Domain.Entities;
 
 namespace Barberia.Api.Controllers;
 
@@ -13,10 +13,12 @@ namespace Barberia.Api.Controllers;
 public class TurnosController : ControllerBase
 {
     private readonly BarberiaDbContext _context;
+    private readonly IConfiguration _configuration;
 
-    public TurnosController(BarberiaDbContext context)
+    public TurnosController(BarberiaDbContext context, IConfiguration configuration)
     {
         _context = context;
+        _configuration = configuration;
     }
 
     [HttpGet]
@@ -24,9 +26,9 @@ public class TurnosController : ControllerBase
     public async Task<IActionResult> Listar(CancellationToken ct)
     {
         var rolClaim = User.FindFirst(ClaimTypes.Role)?.Value?.ToLower() ?? "";
-        var usuarioIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        var usuarioId = ObtenerUsuarioIdActual();
 
-        if (!long.TryParse(usuarioIdStr, out var usuarioIdActual))
+        if (!usuarioId.HasValue)
         {
             return Unauthorized(new { mensaje = "No se pudo identificar al usuario de la sesión." });
         }
@@ -37,28 +39,26 @@ public class TurnosController : ControllerBase
             .Include(t => t.Barbero)
             .AsQueryable();
 
-        bool esAdminGlobal = rolClaim == "admin" || rolClaim == "administrador";
-        bool esBarbero = rolClaim == "barbero";
+        bool esAdminGlobal = rolClaim.Contains("admin");
+        bool esBarbero = rolClaim.Contains("barbero");
 
-        // Si es barbero, filtramos estrictamente por los turnos asignados a su BarberoId
         if (esBarbero)
         {
-            query = query.Where(t => t.BarberoId == usuarioIdActual);
+            query = query.Where(t => t.BarberoId == usuarioId.Value);
         }
-        // Si es un cliente común (no admin ni barbero), filtramos por los turnos que él reservó
         else if (!esAdminGlobal)
         {
-            query = query.Where(t => t.UsuarioId == usuarioIdActual);
+            query = query.Where(t => t.UsuarioId == usuarioId.Value);
         }
-        // Si es Admin, la consulta no se filtra y trae todos los turnos.
 
-        var turnos = await query
+        var turnosDb = await query
             .OrderByDescending(t => t.FechaHora)
             .Select(t => new
             {
                 t.Id,
                 t.FechaHora,
                 t.Estado,
+                t.TokenPublico,
                 producto = t.Producto != null ? t.Producto.Nombre : "Servicio general",
                 precio = t.Producto != null ? t.Producto.Precio : 0,
                 t.UsuarioId,
@@ -68,6 +68,21 @@ public class TurnosController : ControllerBase
             })
             .ToListAsync(ct);
 
+        var turnos = turnosDb.Select(t => new
+        {
+            t.Id,
+            t.FechaHora,
+            t.Estado,
+            t.TokenPublico,
+            t.producto,
+            t.precio,
+            t.UsuarioId,
+            t.BarberoId,
+            t.clienteNombre,
+            t.barberoNombre,
+            qrUrl = ObtenerUrlDeepLink(t.TokenPublico)
+        }).ToList();
+
         return Ok(turnos);
     }
 
@@ -75,14 +90,14 @@ public class TurnosController : ControllerBase
     [Authorize]
     public async Task<IActionResult> ObtenerBandeja(CancellationToken ct)
     {
-        var usuarioIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-        if (!long.TryParse(usuarioIdStr, out var usuarioId))
+        var usuarioId = ObtenerUsuarioIdActual();
+        if (!usuarioId.HasValue)
         {
-            return Unauthorized();
+            return Unauthorized(new { mensaje = "No se pudo identificar al usuario." });
         }
 
         var notificaciones = await _context.Notificaciones
-            .Where(n => n.UsuarioId == usuarioId)
+            .Where(n => n.UsuarioId == usuarioId.Value)
             .OrderByDescending(n => n.FechaCreacion)
             .ToListAsync(ct);
 
@@ -93,14 +108,14 @@ public class TurnosController : ControllerBase
     [Authorize]
     public async Task<IActionResult> MarcarComoLeida(long id, CancellationToken ct)
     {
-        var usuarioIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-        if (!long.TryParse(usuarioIdStr, out var usuarioId))
+        var usuarioId = ObtenerUsuarioIdActual();
+        if (!usuarioId.HasValue)
         {
             return Unauthorized();
         }
 
         var notificacion = await _context.Notificaciones
-            .FirstOrDefaultAsync(n => n.Id == id && n.UsuarioId == usuarioId, ct);
+            .FirstOrDefaultAsync(n => n.Id == id && n.UsuarioId == usuarioId.Value, ct);
 
         if (notificacion == null)
         {
@@ -117,38 +132,42 @@ public class TurnosController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Crear([FromBody] TurnoDto dto, CancellationToken ct)
     {
-        var usuarioIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                            ?? User.FindFirst("sub")?.Value 
-                            ?? User.FindFirst("id")?.Value 
-                            ?? User.FindFirst("uid")?.Value;
+        var usuarioId = ObtenerUsuarioIdActual();
 
-        long usuarioId = 0;
-        if (!long.TryParse(usuarioIdStr, out usuarioId))
+        if (!usuarioId.HasValue)
         {
             var identifierFallback = User.FindFirst(ClaimTypes.Name)?.Value 
-                                    ?? User.FindFirst(ClaimTypes.Email)?.Value 
-                                    ?? usuarioIdStr;
+                                     ?? User.FindFirst(ClaimTypes.Email)?.Value;
 
-            var usuarioDb = await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.Email == identifierFallback || u.Nombre == identifierFallback, ct);
+            if (!string.IsNullOrEmpty(identifierFallback))
+            {
+                var usuarioDb = await _context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == identifierFallback.ToLower(), ct);
 
-            if (usuarioDb != null)
-            {
-                usuarioId = usuarioDb.Id;
-            }
-            else
-            {
-                return Unauthorized(new { mensaje = "No se pudo identificar al usuario de la sesión para crear el turno." });
+                if (usuarioDb != null)
+                {
+                    usuarioId = usuarioDb.Id;
+                }
             }
         }
 
-        // Combinamos la fecha elegida con la hora del bloque seleccionado (ej: "15:00 - 15:40")
+        if (!usuarioId.HasValue || usuarioId.Value <= 0)
+        {
+            return Unauthorized(new { mensaje = "No se pudo identificar al usuario de la sesión para crear el turno." });
+        }
+
+        var productoExiste = await _context.Productos.AnyAsync(p => p.Id == dto.ProductoId, ct);
+        if (!productoExiste)
+        {
+            return BadRequest(new { mensaje = "El servicio o producto seleccionado no es válido." });
+        }
+
         DateTime fechaHoraFinal = dto.FechaHora;
         if (!string.IsNullOrWhiteSpace(dto.Horario))
         {
             try 
             {
-                var horaInicioStr = dto.Horario.Split('-')[0].Trim(); // "15:00"
+                var horaInicioStr = dto.Horario.Split('-')[0].Trim(); 
                 var partesHora = horaInicioStr.Split(':');
                 int hora = int.Parse(partesHora[0]);
                 int minuto = int.Parse(partesHora[1]);
@@ -163,7 +182,7 @@ public class TurnosController : ControllerBase
 
         var turno = new Turno
         {
-            UsuarioId = (int)usuarioId,
+            UsuarioId = (int)usuarioId.Value,
             ProductoId = (int)dto.ProductoId,
             BarberoId = dto.BarberoId > 0 ? (int?)dto.BarberoId : null,
             FechaHora = fechaHoraFinal,
@@ -173,34 +192,54 @@ public class TurnosController : ControllerBase
 
         _context.Turnos.Add(turno);
 
-        // --- NOTIFICACIÓN PARA EL BARBERO / ADMINISTRADOR ---
-        var barberosYAdmins = await _context.Usuarios
-            .Where(u => u.Rol != null && (
-                u.Rol.ToLower() == "admin" || 
-                u.Rol.ToLower() == "administrador" ||
-                (dto.BarberoId > 0 && u.Id == dto.BarberoId))) 
-            .ToListAsync(ct);
-
-        if (!barberosYAdmins.Any())
+        try
         {
-            barberosYAdmins = await _context.Usuarios.Take(1).ToListAsync(ct);
-        }
+            var barberosYAdmins = await _context.Usuarios
+                .Where(u => u.Rol != null && (
+                    u.Rol.ToLower() == "admin" || 
+                    u.Rol.ToLower() == "administrador" ||
+                    (dto.BarberoId > 0 && u.Id == dto.BarberoId))) 
+                .ToListAsync(ct);
 
-        foreach (var staff in barberosYAdmins)
-        {
-            _context.Notificaciones.Add(new Notificacion
+            if (!barberosYAdmins.Any())
             {
-                UsuarioId = (int)staff.Id, 
-                Titulo = "¡Nuevo Turno Reservado!",
-                Mensaje = $"Un cliente ha reservado un turno para el {fechaHoraFinal:dd/MM/yyyy} a las {dto.Horario}.",
-                Leida = false,
-                FechaCreacion = DateTime.Now
-            });
+                barberosYAdmins = await _context.Usuarios.Take(1).ToListAsync(ct);
+            }
+
+            foreach (var staff in barberosYAdmins)
+            {
+                _context.Notificaciones.Add(new Notificacion
+                {
+                    UsuarioId = (int)staff.Id, 
+                    Titulo = "¡Nuevo Turno Reservado!",
+                    Mensaje = $"Un cliente ha reservado un turno para el {fechaHoraFinal:dd/MM/yyyy} a las {dto.Horario}.",
+                    Leida = false,
+                    FechaCreacion = DateTime.Now
+                });
+            }
+        }
+        catch
+        {
+            // Evitamos que falle la creación si hay un error con las notificaciones
         }
         
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensaje = "Error al guardar el turno en la base de datos.", detalle = ex.InnerException?.Message ?? ex.Message });
+        }
 
-        return Ok(new { mensaje = "Turno reservado con éxito", turnoId = turno.Id });
+        var qrUrl = ObtenerUrlDeepLink(turno.TokenPublico);
+
+        return Ok(new { 
+            mensaje = "Turno reservado con éxito", 
+            turnoId = turno.Id,
+            tokenPublico = turno.TokenPublico,
+            qrUrl = qrUrl
+        });
     }
 
     [HttpDelete("{id}")]
@@ -214,13 +253,13 @@ public class TurnosController : ControllerBase
         }
 
         var rolClaim = User.FindFirst(ClaimTypes.Role)?.Value?.ToLower() ?? "";
-        var usuarioIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        var usuarioId = ObtenerUsuarioIdActual();
 
-        bool esStaff = rolClaim == "admin" || rolClaim == "administrador" || rolClaim == "barbero";
+        bool esStaff = rolClaim.Contains("admin") || rolClaim.Contains("barbero");
 
-        if (!esStaff && long.TryParse(usuarioIdStr, out var usuarioId))
+        if (!esStaff && usuarioId.HasValue)
         {
-            if (turno.UsuarioId != usuarioId)
+            if (turno.UsuarioId != usuarioId.Value)
             {
                 return Forbid();
             }
@@ -236,33 +275,30 @@ public class TurnosController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ObtenerQrTurno(long id, CancellationToken ct)
     {
-        var turno = await _context.Turnos
-            .Include(t => t.Producto)
-            .FirstOrDefaultAsync(t => t.Id == id, ct);
-
-        if (turno == null)
+        try
         {
-            return NotFound(new { mensaje = "Turno no encontrado para generar QR." });
-        }
+            var turno = await _context.Turnos.FirstOrDefaultAsync(t => t.Id == id, ct);
 
-        string nombreServicio = turno.Producto != null ? turno.Producto.Nombre : "Servicio general";
-        decimal precioServicio = turno.Producto != null ? turno.Producto.Precio : 0;
-
-        string textoQr = $"=== BARBERÍA SANTIAGO ===\n" +
-                         $"Turno ID: {turno.Id}\n" +
-                         $"Servicio: {nombreServicio}\n" +
-                         $"Precio: ${precioServicio}\n" +
-                         $"Fecha: {turno.FechaHora:dd/MM/yyyy HH:mm}\n" +
-                         $"Estado: {turno.Estado}";
-
-        using (var qrGenerator = new QRCodeGenerator())
-        {
-            var qrCodeData = qrGenerator.CreateQrCode(textoQr, QRCodeGenerator.ECCLevel.Q);
-            using (var qrCode = new PngByteQRCode(qrCodeData))
+            if (turno == null)
             {
-                byte[] qrCodeBytes = qrCode.GetGraphic(20);
-                return File(qrCodeBytes, "image/png");
+                return NotFound(new { mensaje = $"Turno con ID {id} no encontrado para generar QR." });
             }
+
+            string urlDeepLink = ObtenerUrlDeepLink(turno.TokenPublico);
+
+            using (var qrGenerator = new QRCodeGenerator())
+            {
+                var qrCodeData = qrGenerator.CreateQrCode(urlDeepLink, QRCodeGenerator.ECCLevel.Q);
+                using (var qrCode = new PngByteQRCode(qrCodeData))
+                {
+                    byte[] qrCodeBytes = qrCode.GetGraphic(20);
+                    return File(qrCodeBytes, "image/png");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensaje = "Error interno al generar el QR", detalle = ex.Message });
         }
     }
 
@@ -279,6 +315,30 @@ public class TurnosController : ControllerBase
         _context.Notificaciones.Remove(notificacion);
         await _context.SaveChangesAsync(ct);
         return Ok(new { mensaje = "Notificación eliminada correctamente" });
+    }
+
+    private long? ObtenerUsuarioIdActual()
+    {
+        var usuarioIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                            ?? User.FindFirst("sub")?.Value 
+                            ?? User.FindFirst("id")?.Value 
+                            ?? User.FindFirst("uid")?.Value;
+
+        if (long.TryParse(usuarioIdStr, out var id))
+        {
+            return id;
+        }
+        return null;
+    }
+
+ private string ObtenerUrlDeepLink(string tokenPublico)
+    {
+        var configurada = _configuration["Publico:BaseUrl"];
+        var baseUrl = string.IsNullOrWhiteSpace(configurada)
+            ? $"{Request.Scheme}://{Request.Host}"
+            : configurada.TrimEnd('/');
+        
+        return $"{baseUrl}/api/publico/turnos/{tokenPublico}";
     }
 }
 

@@ -96,11 +96,14 @@
             <div class="qr-container" v-if="turno.id && !offlineStore.sinConexion">
               <p class="qr-label">Código QR del Turno:</p>
               <img 
-                :src="`${apiUrl}/api/turnos/${turno.id}/qr`" 
+                v-if="qrUrlsMap[turno.id]"
+                :src="qrUrlsMap[turno.id]" 
                 alt="QR del Turno" 
                 class="qr-imagen"
-                @error="ocultarQrError"
               />
+              <div v-else class="qr-cargando">
+                <p style="font-size: 0.75rem; color: #888;">Cargando QR...</p>
+              </div>
             </div>
 
             <!-- Acciones -->
@@ -151,6 +154,7 @@ const turnosStore = useTurnosStore();
 const offlineStore = use_offline_store();
 
 const notificaciones = ref<any[]>([]);
+const qrUrlsMap = ref<{ [key: number]: string }>({});
 const apiUrl = obtener_api_url();
 
 // Normalización segura del rol en mayúsculas para evitar fallas de comparación
@@ -184,6 +188,33 @@ const cargarTodo = async () => {
     turnosStore.cargarTurnos(), 
     cargarNotificaciones()
   ]);
+  await cargarCodigosQr();
+};
+
+const cargarCodigosQr = async () => {
+  const turnos = turnosStore.turnos || [];
+  const baseClean = (apiUrl || 'http://localhost:5211').replace(/\/+$/, '').replace(/\/api$/, '');
+  const tokenLimpio = obtenerTokenLimpio();
+
+  for (const turno of turnos) {
+    if (turno.id && !qrUrlsMap.value[turno.id]) {
+      try {
+        const response = await fetch(`${baseClean}/api/turnos/${turno.id}/qr`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${tokenLimpio || sesion.token}`
+          }
+        });
+
+        if (!response.ok) throw new Error('No se pudo obtener el QR');
+
+        const blob = await response.blob();
+        qrUrlsMap.value[turno.id] = window.URL.createObjectURL(blob);
+      } catch (e) {
+        console.error(`No se pudo cargar el QR para el turno ${turno.id}:`, e);
+      }
+    }
+  }
 };
 
 // Función auxiliar para obtener el token limpio
@@ -344,11 +375,6 @@ const convertBlobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject
   reader.onload = () => resolve(reader.result as string);
   reader.readAsDataURL(blob);
 });
-
-const ocultarQrError = (event: Event) => {
-  const target = event.target as HTMLElement;
-  if (target) target.style.display = 'none';
-};
 
 const formatearFecha = (fechaIso: string) => {
   if (!fechaIso) return 'Fecha no especificada';

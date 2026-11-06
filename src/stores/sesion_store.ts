@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
+import axios from 'axios';
+import { obtener_api_url } from '../config/debug';
 
 const CLAVE_TOKEN = 'tudominio_token';
 const CLAVE_REFRESH = 'tudominio_refresh';
@@ -14,6 +16,7 @@ export const use_sesion_store = defineStore('sesion', () => {
   const restaurando = ref<boolean>(true);
   const rol_activo = ref<string | null>(null);
   const usuario_id = ref<any | null>(null); 
+  const error_login = ref<string | null>(null); 
 
   const restaurar_sesion = async () => {
     try {
@@ -77,12 +80,48 @@ export const use_sesion_store = defineStore('sesion', () => {
     }
   };
 
+  // ACCIÓN PARA INICIAR SESIÓN CON GOOGLE OAUTH
+  const login_con_google = async (idTokenGoogle: string) => {
+    try {
+      error_login.value = null;
+      
+      const apiUrl = obtener_api_url();
+      const baseClean = (apiUrl || 'http://192.168.100.137:5211').replace(/\/+$/, '').replace(/\/api$/, '');
+
+      // Apunta dinámicamente a tu backend C# utilizando la URL configurada
+      const response = await axios.post(`${baseClean}/api/auth/google`, {
+        idToken: idTokenGoogle
+      });
+
+      const data = response.data;
+      
+      // Guardamos la sesión con la respuesta del backend
+      await guardar_sesion(
+        data.token, 
+        data.refreshToken || 'google-token', 
+        data.rol || 'Cliente', 
+        data.usuarioId
+      );
+
+      return true;
+    } catch (error: any) {
+      if (error.response && error.response.status === 403) {
+        // Requisito de la Unidad 12: Cuenta no activada por el administrador
+        error_login.value = error.response.data.mensaje || 'Tu cuenta no está habilitada por un administrador.';
+      } else {
+        error_login.value = 'Ocurrió un error al autenticar con Google.';
+      }
+      return false;
+    }
+  };
+
   const cerrar_sesion = async () => {
     token.value = null;
     refresh_token.value = null;
     rol_activo.value = null;
     usuario_id.value = null; 
     autenticado.value = false;
+    error_login.value = null;
 
     localStorage.removeItem(CLAVE_TOKEN);
     localStorage.removeItem(CLAVE_REFRESH);
@@ -110,8 +149,10 @@ export const use_sesion_store = defineStore('sesion', () => {
     restaurando,
     rol_activo,
     usuario_id, 
+    error_login,
     restaurar_sesion,
     guardar_sesion,
+    login_con_google, 
     cerrar_sesion,
     obtener_rol_activo,
   };

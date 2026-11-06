@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router';
 
 import { IonicVue } from '@ionic/vue';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css';
@@ -28,6 +29,13 @@ import '@ionic/vue/css/palettes/dark.system.css';
 
 /* Theme variables */
 import './theme/variables.css';
+
+// Inicialización de Google Auth para Capacitor
+GoogleAuth.initialize({
+  clientId: '203460388544-k5edkijusrvvu2gjqvr78igf959ogkli.apps.googleusercontent.com', 
+  scopes: ['profile', 'email'],
+  grantOfflineAccess: true,
+});
 
 const app = createApp(App);
 const pinia = createPinia();

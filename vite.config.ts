@@ -14,7 +14,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Solución definitiva para el error de devtools en producción/móvil
+      '@vue/devtools-api': path.resolve(__dirname, './src/config/empty-devtools.ts'),
     },
+  },
+  build: {
+    rollupOptions: {
+      external: []
+    }
   },
   test: {
     globals: true,
