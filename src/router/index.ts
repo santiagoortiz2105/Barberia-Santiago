@@ -77,9 +77,9 @@ router.beforeEach(async (to) => {
   if (rolActivoUpper && rolesPermitidosUpper.includes(rolActivoUpper)) return true;
 
   // Dispara el 403 corregido
-  const alert = await alertController.create({
-    header: 'Acceso Denegado (403)',
-    message: `No tienes permisos.\nRuta: ${to.path}\nTu rol: ${rolActivo}`,
+const alert = await alertController.create({
+    header: 'Acceso Denegado',
+    message: 'No tienes permisos para acceder a esta sección.',
     buttons: ['Aceptar'],
     cssClass: 'custom-ionic-alert'
   });

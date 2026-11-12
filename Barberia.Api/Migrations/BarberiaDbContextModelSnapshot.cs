@@ -45,6 +45,23 @@ namespace Barberia.Api.Migrations
                     b.ToTable("Categorias");
                 });
 
+            modelBuilder.Entity("Barberia.Api.Domain.Entities.GaleriaItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("LONGTEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GaleriaItems");
+                });
+
             modelBuilder.Entity("Barberia.Api.Domain.Entities.Notificacion", b =>
                 {
                     b.Property<long>("Id")

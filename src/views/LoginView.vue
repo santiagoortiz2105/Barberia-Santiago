@@ -1,56 +1,71 @@
 <template>
   <ion-page>
-    <ion-content class="ion-padding login-container" fullscreen>
-      <div class="login-card">
-        <h2>Barbería Santiago</h2>
-        <p class="subtitulo">
-          {{ esRegistro ? 'Crea una cuenta nueva' : 'Inicia sesión para continuar' }}
-        </p>
+    <ion-content class="login-background" :fullscreen="true">
+      <div class="login-wrapper">
+        <div class="login-card">
+          
+          <!-- Encabezado con Avatar / Logo -->
+          <div class="login-header">
+            <div class="logo-circle">
+              <span>✂️</span>
+            </div>
+            <h2>Barbería Santiago</h2>
+            <p class="subtitulo">
+              {{ esRegistro ? 'Crea una cuenta nueva' : 'Inicia sesión para continuar' }}
+            </p>
+          </div>
 
-        <!-- Campo Nombre (Solo visible en modo Registro) -->
-        <div class="input-group" v-if="esRegistro">
-          <label>Nombre y Apellido</label>
-          <input type="text" v-model="nombre" placeholder="Ej. Juan Pérez" />
-        </div>
+          <!-- Formulario de Acceso / Registro -->
+          <div class="form-container">
+            
+            <!-- Campo Nombre (Solo visible en modo Registro) -->
+            <div class="input-group" v-if="esRegistro">
+              <label>Nombre y Apellido</label>
+              <input type="text" v-model="nombre" placeholder="Ej. Juan Pérez" class="custom-input" />
+            </div>
 
-        <div class="input-group">
-          <label>Correo Electrónico</label>
-          <input type="email" v-model="email" placeholder="correo@gmail.com" />
-        </div>
+            <div class="input-group">
+              <label>Correo Electrónico</label>
+              <input type="email" v-model="email" placeholder="correo@gmail.com" class="custom-input" />
+            </div>
 
-        <div class="input-group">
-          <label>Contraseña</label>
-          <input type="password" v-model="password" placeholder="••••••••" />
-        </div>
+            <div class="input-group">
+              <label>Contraseña</label>
+              <input type="password" v-model="password" placeholder="••••••••" class="custom-input" />
+            </div>
 
-        <button class="btn-login" @click="handleAccion">
-          {{ esRegistro ? 'REGISTRARSE' : 'INGRESAR' }}
-        </button>
+            <button class="btn-login" @click="handleAccion">
+              {{ esRegistro ? 'REGISTRARSE' : 'INGRESAR' }}
+            </button>
 
-        <!-- Separador visual -->
-        <div class="divider">
-          <span>o</span>
-        </div>
+            <!-- Separador visual -->
+            <div class="divider">
+              <span>o</span>
+            </div>
 
-        <!-- 🌐 BOTÓN DE GOOGLE OAUTH 2.0 (Requisito Unidad 12) -->
-        <button class="btn-google" @click="handleGoogleLogin">
-          <svg class="google-icon" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.18 21.38 7.22 24 12 24z"/>
-            <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.19C.43 8.15 0 9.89 0 11.75s.43 3.6 1.19 5.14l4.08-2.65z"/>
-            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.18 2.62 1.19 6.61l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
-          </svg>
-          Continuar con Google
-        </button>
+            <!-- 🌐 BOTÓN DE GOOGLE OAUTH 2.0 -->
+            <button class="btn-google" @click="handleGoogleLogin">
+              <svg class="google-icon" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.18 21.38 7.22 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.19C.43 8.15 0 9.89 0 11.75s.43 3.6 1.19 5.14l4.08-2.65z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.18 2.62 1.19 6.61l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
+              </svg>
+              Continuar con Google
+            </button>
 
-        <!-- Enlace para alternar entre Login y Registro -->
-        <div class="toggle-modo">
-          <p v-if="!esRegistro">
-            ¿No tienes cuenta? <span @click="esRegistro = true">Regístrate aquí</span>
-          </p>
-          <p v-else>
-            ¿Ya tienes cuenta? <span @click="esRegistro = false">Inicia sesión</span>
-          </p>
+            <!-- Enlace para alternar entre Login y Registro -->
+            <div class="toggle-modo">
+              <p v-if="!esRegistro">
+                ¿No tienes cuenta? <span @click="esRegistro = true">Regístrate aquí</span>
+              </p>
+              <p v-else>
+                ¿Ya tienes cuenta? <span @click="esRegistro = false">Inicia sesión</span>
+              </p>
+            </div>
+
+          </div>
+
         </div>
       </div>
     </ion-content>
@@ -149,10 +164,8 @@ const handleAccion = async () => {
   }
 };
 
-// 🌐 MANEJADOR DEL LOGIN CON GOOGLE OAUTH 2.0 (Real mediante plugin)
 const handleGoogleLogin = async () => {
   try {
-    // 1. Invoca el flujo nativo/web de Google para obtener las credenciales y el idToken real
     const googleUser = await GoogleAuth.signIn();
     const idTokenReal = googleUser.authentication.idToken;
 
@@ -160,13 +173,11 @@ const handleGoogleLogin = async () => {
       throw new Error("No se pudo obtener el token de autenticación de Google.");
     }
 
-    // 2. Enviamos el token real a la acción de nuestro sesion_store
     const exito = await sesion.login_con_google(idTokenReal);
 
     if (exito) {
       router.replace('/app/inicio');
     } else {
-      // Si el backend responde con 403 (cuenta inactiva/no registrada por admin) o falla
       await mostrarAlerta('Acceso Denegado', sesion.error_login || 'No se pudo iniciar sesión con Google.');
     }
   } catch (error: any) {
@@ -177,59 +188,104 @@ const handleGoogleLogin = async () => {
 </script>
 
 <style scoped>
-.login-container {
+/* Fondo general con degradado moderno y elegante */
+.login-background {
+  --background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* Contenedor flexible para centrar perfectamente al medio en cualquier pantalla */
+.login-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  --background: var(--ion-background-color, #f4f5f8);
+  min-height: 100vh;
+  padding: 20px;
 }
 
+/* Tarjeta flotante moderna */
 .login-card {
   background: var(--ion-card-background, #ffffff);
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 32px 24px;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   width: 100%;
-  max-width: 380px;
-  margin: auto;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+
+/* Encabezado y Logo */
+.login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logo-circle {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #3880ff, #1d4ed8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  margin: 0 auto 12px auto;
+  box-shadow: 0 8px 16px rgba(56, 128, 255, 0.3);
 }
 
 .login-card h2 {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 800;
-  text-align: center;
-  margin-bottom: 4px;
-  color: var(--ion-text-color, #000);
+  margin: 0 0 4px 0;
+  color: var(--ion-text-color, #111);
 }
 
 .subtitulo {
   text-align: center;
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 24px;
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Contenedor de formulario */
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .input-group {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .input-group label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+  margin-left: 2px;
 }
 
-.input-group input {
+/* Inputs personalizados y limpios */
+.custom-input {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-  background: var(--ion-background-color, #fff);
-  color: var(--ion-text-color, #000);
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
+
+.custom-input:focus {
+  border-color: #3880ff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(56, 128, 255, 0.15);
+}
+
 
 .btn-login {
   width: 100%;
@@ -237,54 +293,68 @@ const handleGoogleLogin = async () => {
   color: white;
   border: none;
   padding: 14px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 6px;
+  box-shadow: 0 4px 12px rgba(56, 128, 255, 0.3);
+  transition: background 0.2s, transform 0.1s;
 }
+
+.btn-login:hover {
+  background: #3171e0;
+}
+
+.btn-login:active {
+  transform: scale(0.98);
+}
+
 
 .divider {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 20px 0;
-  color: #ccc;
+  margin: 14px 0;
 }
 
-.divider::before, .divider::after {
+.divider::before, 
+.divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .divider span {
-  padding: 0 10px;
+  padding: 0 12px;
   font-size: 0.8rem;
-  color: #888;
+  color: #94a3b8;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .btn-google {
   width: 100%;
   background: white;
-  color: #444;
-  border: 1px solid #ccc;
+  color: #334155;
+  border: 1px solid #cbd5e1;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  transition: background 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .btn-google:hover {
-  background: #f8f9fa;
+  background: #f8fafc;
+  border-color: #94a3b8;
 }
 
 .google-icon {
@@ -294,14 +364,18 @@ const handleGoogleLogin = async () => {
 
 .toggle-modo {
   text-align: center;
-  margin-top: 16px;
+  margin-top: 14px;
   font-size: 0.85rem;
-  color: #666;
+  color: #64748b;
 }
 
 .toggle-modo span {
   color: #3880ff;
-  font-weight: bold;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.toggle-modo span:hover {
+  text-decoration: underline;
 }
 </style>

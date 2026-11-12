@@ -12,6 +12,7 @@ public class BarberiaDbContext : DbContext
     public DbSet<Turno> Turnos { get; set; }
     public DbSet<Notificacion> Notificaciones { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
+    public DbSet<GaleriaItem> GaleriaItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,6 +21,12 @@ public class BarberiaDbContext : DbContext
         modelBuilder.Entity<Producto>(entity =>
         {
             entity.Property(p => p.Precio).HasPrecision(18, 2);
+        });
+
+        modelBuilder.Entity<GaleriaItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Url).HasColumnType("LONGTEXT");
         });
     }
 }

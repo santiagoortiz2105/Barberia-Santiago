@@ -35,7 +35,7 @@ const rol_actual = computed(() => {
   return sesion.obtener_rol_activo();
 });
 
-// Verificamos si no tiene rol (si es nulo, vacío o 'sinrol')
+// Verificamos si no tiene rol 
 const es_sin_rol = computed(() => {
   const rol = rol_actual.value;
   if (!rol) return true;
