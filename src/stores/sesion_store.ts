@@ -40,16 +40,57 @@ export const use_sesion_store = defineStore('sesion', () => {
 
       if (finalToken) {
         token.value = finalToken;
-        rol_activo.value = finalRol ? finalRol.toLowerCase() : null; // Normalizado a minúsculas
+        rol_activo.value = finalRol ? finalRol.toLowerCase() : null; 
         usuario_id.value = finalUserId;
         autenticado.value = true;
         console.log("Sesión restaurada exitosamente. Rol activo:", rol_activo.value);
+        
+        // Opcional: Re-sincronizar el token push al restaurar sesión activa
+        registrar_dispositivo_push(finalToken);
       }
     } catch (e) {
       console.error("Error crítico al restaurar sesión:", e);
       autenticado.value = false;
     } finally {
       restaurando.value = false;
+    }
+  };
+
+  // NObtiene el token FCM del dispositivo y lo manda a la API
+  const registrar_dispositivo_push = async (tokenJwt: string) => {
+    try {
+      let fcmToken = null;
+
+      try {
+        // Importación dinámica del plugin de Capacitor Firebase Messaging
+        // @ts-ignore
+        const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
+        await FirebaseMessaging.requestPermissions();
+        const result = await FirebaseMessaging.getToken();
+        fcmToken = result.token;
+      } catch (err) {
+        console.log("Entorno web o plugin nativo no disponible para Push (normal en navegador):", err);
+        console.error("❌ ERROR DETALLADO AL REGISTRAR PUSH:", err);
+        return; 
+      }
+
+      if (!fcmToken) return;
+
+      const apiUrl = obtener_api_url();
+      const baseClean = (apiUrl || 'http://192.168.100.137:5211').replace(/\/+$/, '').replace(/\/api$/, '');
+
+      // Envía el token a tu endpoint PUT /api/dispositivos
+      await axios.put(`${baseClean}/api/dispositivos`, {
+        token: fcmToken
+      }, {
+        headers: {
+          Authorization: `Bearer ${tokenJwt}`
+        }
+      });
+
+      console.log("Token push registrado correctamente en la API.");
+    } catch (e) {
+      console.warn("No se pudo registrar el dispositivo push:", e);
     }
   };
 
@@ -78,6 +119,9 @@ export const use_sesion_store = defineStore('sesion', () => {
     } catch (e) {
       console.warn("No se pudo guardar en SecureStorage nativo, se usó localStorage:", e);
     }
+
+    // DISPARAR EL REGISTRO AUTOMÁTICO DEL DISPOSITIVO PUSH
+    await registrar_dispositivo_push(newToken);
   };
 
   // ACCIÓN PARA INICIAR SESIÓN CON GOOGLE OAUTH
@@ -88,14 +132,12 @@ export const use_sesion_store = defineStore('sesion', () => {
       const apiUrl = obtener_api_url();
       const baseClean = (apiUrl || 'http://192.168.100.137:5211').replace(/\/+$/, '').replace(/\/api$/, '');
 
-      // Apunta dinámicamente a tu backend C# utilizando la URL configurada
       const response = await axios.post(`${baseClean}/api/auth/google`, {
         idToken: idTokenGoogle
       });
 
       const data = response.data;
       
-      // Guardamos la sesión con la respuesta del backend
       await guardar_sesion(
         data.token, 
         data.refreshToken || 'google-token', 
@@ -106,7 +148,6 @@ export const use_sesion_store = defineStore('sesion', () => {
       return true;
     } catch (error: any) {
       if (error.response && error.response.status === 403) {
-        // Requisito de la Unidad 12: Cuenta no activada por el administrador
         error_login.value = error.response.data.mensaje || 'Tu cuenta no está habilitada por un administrador.';
       } else {
         error_login.value = 'Ocurrió un error al autenticar con Google.';

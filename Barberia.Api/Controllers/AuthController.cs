@@ -119,7 +119,7 @@ public class AuthController : ControllerBase
                 {
                     Nombre = !string.IsNullOrEmpty(payload.Name) ? payload.Name.Trim() : "Usuario de Google",
                     Email = emailLimpio,
-                    PasswordHash = string.Empty, // Usuarios de Google no usan contraseña local
+                    PasswordHash = string.Empty, 
                     Rol = "Cliente",
                     Activo = true
                 };

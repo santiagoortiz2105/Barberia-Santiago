@@ -55,7 +55,6 @@
         
         <div class="divisor-seccion"></div>
       </div>
-      <!-- =============================================================================== -->
 
       <h2 class="subtitulo-seccion">
         {{ tituloSeccion }}

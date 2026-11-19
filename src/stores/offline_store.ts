@@ -26,7 +26,7 @@ export const use_offline_store = defineStore('offline', () => {
 
     window.addEventListener('online', () => {
       sinConexion.value = false;
-      procesarCola(); // Al volver la red, se envía la cola
+      procesarCola(); 
     });
 
     window.addEventListener('offline', () => {

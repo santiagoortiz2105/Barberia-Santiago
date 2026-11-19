@@ -78,7 +78,7 @@ router.beforeEach(async (to) => {
 
   // Dispara el 403 corregido
 const alert = await alertController.create({
-    header: 'Acceso Denegado',
+    header: 'Acceso Denegado (403)',
     message: 'No tienes permisos para acceder a esta sección.',
     buttons: ['Aceptar'],
     cssClass: 'custom-ionic-alert'

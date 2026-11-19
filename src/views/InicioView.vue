@@ -91,7 +91,7 @@ const subirImagenAlServidor = async () => {
   galeriaPublica.value = Array.isArray(res) ? res : (res?.data || []);
 };
 
-// 🗑️ Función para eliminar la foto seleccionada
+// Función para eliminar la foto seleccionada
 const eliminarImagen = async (idImagen: any) => {
   if (!confirm('¿Estás seguro de que deseas eliminar esta foto de la galería?')) return;
 

@@ -99,7 +99,7 @@ const simularEscaneoWeb = async () => {
 
 const procesarTurnoEscaneado = async () => {
   try {
-    // 1. Extraer limpiamente el número de ID si el QR contiene texto en formato multilínea
+    // Extraer limpiamente el número de ID si el QR contiene texto en formato multilínea
     let idNumerico = datosTurnoId.value;
     if (typeof idNumerico === 'string' && idNumerico.includes('Turno ID:')) {
       const match = idNumerico.match(/Turno ID:\s*([0-9]+)/i);
@@ -108,7 +108,7 @@ const procesarTurnoEscaneado = async () => {
       }
     }
 
-    // 2. Obtener el token guardado para autorizar la petición
+    // Obtener el token guardado para autorizar la petición
     const token = localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('capacitor-storage_tudominio_token');
     const tokenLimpio = token ? token.replace(/^["']|["']$/g, '').trim() : '';
 

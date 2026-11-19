@@ -158,9 +158,8 @@ onMounted(async () => {
     }
     listaBarberos.value = await offlineStore.obtenerBarberosOffline();
 
-    // Escuchamos cuando vuelve la conexión para sincronizar y notificar éxito
     window.addEventListener('online', async () => {
-      offlineStore.sinConexion = false; // Corregido: Sin .value
+      offlineStore.sinConexion = false; 
       const exito = await offlineStore.procesarCola();
       if (exito) {
         mostrarAlerta('¡Turno Reservado!', 'Turno reservado exitosamente.');

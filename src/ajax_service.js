@@ -12,11 +12,9 @@ function obtenerHeaders(isFormData = false) {
     return headers;
 }
 
-// Función blindada contra duplicaciones de /api/
 function construirUrl(endpoint) {
     let limpio = String(endpoint || '').trim();
-    
-    // Remueve cualquier combinación inicial de '/api', 'api' o barras para evitar duplicados
+ 
     while (limpio.startsWith('/api') || limpio.startsWith('api') || limpio.startsWith('/')) {
         if (limpio.startsWith('/api/')) limpio = limpio.substring(5);
         else if (limpio.startsWith('api/')) limpio = limpio.substring(4);

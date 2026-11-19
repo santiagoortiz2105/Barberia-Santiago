@@ -11,6 +11,7 @@ public class BarberiaDbContext : DbContext
     public DbSet<Categoria> Categorias => Set<Categoria>();
     public DbSet<Turno> Turnos { get; set; }
     public DbSet<Notificacion> Notificaciones { get; set; }
+    public DbSet<DispositivoPush> DispositivosPush { get; set; } = null!;
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<GaleriaItem> GaleriaItems { get; set; }
 

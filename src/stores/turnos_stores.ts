@@ -13,7 +13,7 @@ export const useTurnosStore = defineStore('turnos', {
         const apiUrl = obtener_api_url();
         const baseClean = (apiUrl || 'http://localhost:5211').replace(/\/+$/, '').replace(/\/api$/, '');
 
-        // 🔑 Búsqueda robusta del token en todas las posibles claves locales del celular
+        // Búsqueda robusta del token en todas las posibles claves locales del celular
         const tokenGuardado = 
           localStorage.getItem('tudominio_token') || 
           localStorage.getItem('token') || 

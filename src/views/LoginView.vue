@@ -166,6 +166,13 @@ const handleAccion = async () => {
 
 const handleGoogleLogin = async () => {
   try {
+    // Forzamos el cierre de sesión previo para limpiar la caché de Google y obligar al selector de cuentas
+    try {
+      await GoogleAuth.signOut();
+    } catch (e) {
+      // Ignoramos si no había sesión previa activa en el plugin
+    }
+
     const googleUser = await GoogleAuth.signIn();
     const idTokenReal = googleUser.authentication.idToken;
 

@@ -7,6 +7,8 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'http' 
   },
+  android: {webContentsDebuggingEnabled: true
+   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,

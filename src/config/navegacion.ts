@@ -13,7 +13,7 @@ export interface ItemNavegacion {
   grupo: 'principal' | 'configuracion';
   orden: number;
   componente: any;
-  menu_roles?: string[]; // <-- Añadido para controlar el acceso por rol
+  menu_roles?: string[]; 
 }
 
 export const navegacion: ItemNavegacion[] = [
@@ -35,7 +35,8 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal', 
     orden: 20, 
     componente: ServiciosView,
-    menu_roles: ['TODOS'] // Todos pueden ver los servicios
+    menu_roles: ['TODOS']
+     // Todos pueden ver los servicios
   },
   { 
     id: 'barberos', 
@@ -45,7 +46,8 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal', 
     orden: 30, 
     componente: BarberosView,
-    menu_roles: ['administrador', 'barbero'] // Solo admin y barbero ven la lista de colegas/personal
+    menu_roles: ['administrador', 'barbero']
+     // Solo admin y barbero ven la lista de colegas/personal
   },
   { 
     id: 'turnos', 
@@ -55,7 +57,8 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'principal', 
     orden: 40, 
     componente: TurnosView,
-    menu_roles: ['TODOS'] // Permitido para todos; dentro de la vista se gestiona si ve los generales o sus propios turnos
+    menu_roles: ['TODOS'] 
+    // Permitido para todos
   },
   { 
     id: 'micuenta', 
@@ -65,6 +68,7 @@ export const navegacion: ItemNavegacion[] = [
     grupo: 'configuracion', 
     orden: 50, 
     componente: MiCuentaView,
-    menu_roles: ['TODOS'] // Todos pueden ver su propia cuenta
+    menu_roles: ['TODOS']  
+    // Todos pueden ver su propia cuenta
   }
 ];
